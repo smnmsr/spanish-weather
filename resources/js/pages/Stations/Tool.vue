@@ -1,21 +1,10 @@
 <script setup lang="ts">
+import StationsMap from '@/components/StationsMap.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItemType } from '@/types';
 import { router } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-
-import L from 'leaflet';
-import markerRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIconUrl from 'leaflet/dist/images/marker-icon.png';
-import markerShadowUrl from 'leaflet/dist/images/marker-shadow.png';
-
-// Configure default marker icons
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: markerRetinaUrl,
-    iconUrl: markerIconUrl,
-    shadowUrl: markerShadowUrl,
-});
 
 interface Station {
     id: string | null;
@@ -35,116 +24,21 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const breadcrumbs = ref<BreadcrumbItemType[]>([
-    { label: 'Home', href: '/' },
-    { label: 'Stations Tool' },
+    { title: 'Home', href: '/' },
+    { title: 'Stations Tool' },
 ]);
 
 const welcomeRef = ref<HTMLElement | null>(null);
 const mapSectionRef = ref<HTMLElement | null>(null);
-const mapRef = ref<HTMLDivElement | null>(null);
+const mapComponentRef = ref<InstanceType<typeof StationsMap> | null>(null);
 const selectedIds = ref<Set<string>>(new Set(props.selectedStations));
-let map: L.Map | null = null;
-let markerCluster: L.MarkerClusterGroup | null = null;
-let markers: L.Marker[] = [];
 let scrollTimeout: number | null = null;
 
 const selectedCount = computed(() => selectedIds.value.size);
 
 // Current step; set from URL on mount to avoid SSR "window" issues
 const currentStep = ref<'welcome' | 'map'>('welcome');
-
-function parseCoordinate(value: string | number): number {
-    if (typeof value === 'number') return value;
-    const num = Number(value);
-    if (!Number.isNaN(num)) return num;
-    const match = value.match(/(\d+)°(\d+)'(\d+)"([NSEW])/);
-    if (match) {
-        const degrees = Number(match[1]);
-        const minutes = Number(match[2]);
-        const seconds = Number(match[3]);
-        const direction = match[4];
-        let decimal = degrees + minutes / 60 + seconds / 3600;
-        if (direction === 'S' || direction === 'W') decimal *= -1;
-        return decimal;
-    }
-    return NaN;
-}
-
-function initializeMap() {
-    if (!mapRef.value || map) return;
-
-    const madridCenter: [number, number] = [40.4167, -3.70325];
-    map = L.map(mapRef.value).setView(madridCenter, 6);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 18,
-    }).addTo(map);
-
-    // Initialize marker cluster group
-    // @ts-ignore - markerClusterGroup is added by the plugin
-    markerCluster = L.markerClusterGroup({
-        maxClusterRadius: 50,
-        spiderfyOnMaxZoom: true,
-        showCoverageOnHover: false,
-        zoomToBoundsOnClick: true,
-    });
-    map.addLayer(markerCluster);
-
-    updateMarkers();
-
-    // Ensure the map computes proper size when container becomes visible
-    setTimeout(() => {
-        map && map.invalidateSize(true);
-    }, 0);
-}
-
-function updateMarkers() {
-    if (!map || !markerCluster) return;
-
-    // Remove all markers from cluster group
-    markerCluster.clearLayers();
-    markers = [];
-
-    for (const s of props.stations) {
-        const lat = parseCoordinate(s.lat);
-        const lon = parseCoordinate(s.lon);
-        if (Number.isNaN(lat) || Number.isNaN(lon)) continue;
-
-        const isSelected = s.id && selectedIds.value.has(s.id);
-
-        // Create custom icon for selected markers
-        const icon = isSelected
-            ? L.icon({
-                  iconUrl: markerIconUrl,
-                  iconRetinaUrl: markerRetinaUrl,
-                  shadowUrl: markerShadowUrl,
-                  iconSize: [25, 41],
-                  iconAnchor: [12, 41],
-                  className: 'selected-marker',
-              })
-            : new L.Icon.Default();
-
-        const marker = L.marker([lat, lon], { icon }).bindPopup(
-            `<strong>${s.name}</strong>${s.provincia ? `<br/>${s.provincia}` : ''}<br/><button class="text-blue-600 underline mt-2">${isSelected ? 'Abwählen' : 'Auswählen'}</button>`,
-        );
-
-        marker.on('click', () => {
-            if (s.id) {
-                toggleStation(s.id);
-                updateMarkers(); // Refresh markers
-            }
-        });
-
-        markers.push(marker);
-        markerCluster.addLayer(marker);
-    }
-
-    if (markers.length) {
-        const group = L.featureGroup(markers);
-        map.fitBounds(group.getBounds(), { padding: [20, 20] });
-    }
-}
+const isMapInitialized = ref(false);
 
 function updateUrlStep(step: 'welcome' | 'map') {
     const url = new URL(window.location.href);
@@ -172,27 +66,22 @@ function handleScroll() {
 
         if (isMapVisible && currentStep.value === 'welcome') {
             updateUrlStep('map');
-            if (!map) {
-                initializeMap();
-            }
         } else if (!isMapVisible && currentStep.value === 'map') {
             updateUrlStep('welcome');
         }
     }, 100);
 }
 
+function handleMapReady() {
+    isMapInitialized.value = true;
+}
+
 function goToMap() {
     updateUrlStep('map');
     mapSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
-    if (!map) {
-        setTimeout(() => {
-            initializeMap();
-            // Invalidate size after scroll to ensure tiles render
-            setTimeout(() => {
-                map && map.invalidateSize(true);
-            }, 100);
-        }, 500);
-    }
+    setTimeout(() => {
+        mapComponentRef.value?.invalidateSize();
+    }, 600);
 }
 
 function saveSelection() {
@@ -210,9 +99,12 @@ function saveSelection() {
     );
 }
 
-function toggleStation(stationId: string | null) {
-    if (!stationId) return;
+function resetSelection() {
+    selectedIds.value.clear();
+    saveSelection();
+}
 
+function toggleStation(stationId: string) {
     if (selectedIds.value.has(stationId)) {
         selectedIds.value.delete(stationId);
     } else {
@@ -222,13 +114,9 @@ function toggleStation(stationId: string | null) {
 
 onMounted(() => {
     // Determine step from URL safely in browser
-    try {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('step') === 'map') {
-            currentStep.value = 'map';
-        }
-    } catch (e) {
-        // noop: keep default 'welcome' when URL not available (SSR)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('step') === 'map') {
+        currentStep.value = 'map';
     }
 
     // Add scroll listener
@@ -237,18 +125,17 @@ onMounted(() => {
     window.addEventListener(
         'resize',
         () => {
-            map && map.invalidateSize(true);
+            mapComponentRef.value?.invalidateSize();
         },
         { passive: true },
     );
 
-    // If step is map, scroll to it and initialize
+    // If step is map, scroll to it
     if (currentStep.value === 'map') {
         setTimeout(() => {
             mapSectionRef.value?.scrollIntoView({ behavior: 'auto' });
-            initializeMap();
             setTimeout(() => {
-                map && map.invalidateSize(true);
+                mapComponentRef.value?.invalidateSize();
             }, 100);
         }, 100);
     }
@@ -311,16 +198,21 @@ onUnmounted(() => {
                         </p>
                     </div>
 
-                    <div
-                        ref="mapRef"
+                    <StationsMap
+                        ref="mapComponentRef"
+                        :stations="stations"
+                        :selectable="true"
+                        :selected-station-ids="selectedIds"
+                        :show-coverage-on-hover="true"
                         class="rounded-lg border border-slate-200 shadow-lg dark:border-slate-800"
-                        style="height: 70vh; width: 100%"
-                    ></div>
+                        @station-click="toggleStation"
+                        @map-ready="handleMapReady"
+                    />
 
                     <div class="mt-6 flex justify-end gap-4">
                         <Button
                             variant="outline"
-                            @click="selectedIds.clear()"
+                            @click="resetSelection"
                             :disabled="selectedCount === 0"
                         >
                             Auswahl zurücksetzen
@@ -341,8 +233,9 @@ onUnmounted(() => {
     </AppLayout>
 </template>
 
-<style>
-.selected-marker {
-    filter: hue-rotate(120deg) saturate(2);
+<style scoped>
+.custom-cluster-icon {
+    background: transparent !important;
+    border: none !important;
 }
 </style>

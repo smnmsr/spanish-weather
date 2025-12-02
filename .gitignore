@@ -26,3 +26,14 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+/tests/**/*.png
+/tests/**/*.jpg
+/tests/**/*.jpeg
+/tests/**/*.gif
+/tests/**/*.svg
+/tests/**/*.mp4
+/tests/**/*.mov
+/tests/**/*.mp3
+/tests/**/*.wav
+/tests/**/*.ogg
+/tests/**/*.webm

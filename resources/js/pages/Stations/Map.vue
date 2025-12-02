@@ -1,19 +1,8 @@
 <script setup lang="ts">
+import StationsMap from '@/components/StationsMap.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItemType } from '@/types';
-import { onMounted, ref } from 'vue';
-
-import L from 'leaflet';
-import markerRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIconUrl from 'leaflet/dist/images/marker-icon.png';
-import markerShadowUrl from 'leaflet/dist/images/marker-shadow.png';
-
-// Configure default marker icons
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: markerRetinaUrl,
-    iconUrl: markerIconUrl,
-    shadowUrl: markerShadowUrl,
-});
+import { ref } from 'vue';
 
 interface Station {
     id: string | null;
@@ -27,63 +16,12 @@ interface Props {
     stations: Station[];
 }
 
-const props = defineProps<Props>();
+defineProps<Props>();
 
 const breadcrumbs = ref<BreadcrumbItemType[]>([
-    { label: 'Home', href: '/' },
-    { label: 'Stations Map' },
+    { title: 'Home', href: '/' },
+    { title: 'Stations Map' },
 ]);
-
-const mapRef = ref<HTMLDivElement | null>(null);
-
-function parseCoordinate(value: string | number): number {
-    if (typeof value === 'number') return value;
-    const num = Number(value);
-    if (!Number.isNaN(num)) return num;
-    const match = value.match(/(\d+)°(\d+)'(\d+)"([NSEW])/);
-    if (match) {
-        const degrees = Number(match[1]);
-        const minutes = Number(match[2]);
-        const seconds = Number(match[3]);
-        const direction = match[4];
-        let decimal = degrees + minutes / 60 + seconds / 3600;
-        if (direction === 'S' || direction === 'W') decimal *= -1;
-        return decimal;
-    }
-    return NaN;
-}
-
-onMounted(() => {
-    if (!mapRef.value) return;
-
-    const madridCenter: [number, number] = [40.4167, -3.70325];
-    const map = L.map(mapRef.value).setView(madridCenter, 6);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 18,
-    }).addTo(map);
-
-    // @ts-ignore - markerClusterGroup is added by the plugin
-    const markers = L.markerClusterGroup({
-        maxClusterRadius: 50,
-        spiderfyOnMaxZoom: true,
-        showCoverageOnHover: false,
-        zoomToBoundsOnClick: true,
-    });
-
-    for (const s of props.stations) {
-        const lat = parseCoordinate(s.lat);
-        const lon = parseCoordinate(s.lon);
-        if (Number.isNaN(lat) || Number.isNaN(lon)) continue;
-        const marker = L.marker([lat, lon]).bindPopup(
-            `<strong>${s.name}</strong>${s.provincia ? `<br/>${s.provincia}` : ''}`,
-        );
-        markers.addLayer(marker);
-    }
-
-    map.addLayer(markers);
-});
 </script>
 
 <template>
@@ -94,11 +32,7 @@ onMounted(() => {
                 Initial map with all available stations. Functionality will
                 improve over time.
             </p>
-            <div
-                ref="mapRef"
-                class="mt-4"
-                style="height: 70vh; width: 100%"
-            ></div>
+            <StationsMap :stations="stations" class="mt-4" />
         </div>
     </AppLayout>
 </template>

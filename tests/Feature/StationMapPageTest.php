@@ -8,7 +8,8 @@ it('renders the stations map on the home page', function () {
     $response->assertSuccessful();
 
     $response->assertInertia(fn (Assert $page) => $page
-        ->component('Stations/Map')
+        ->component('Stations/Tool')
         ->has('stations')
+        ->has('selectedStations')
     );
 });
