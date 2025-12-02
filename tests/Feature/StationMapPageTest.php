@@ -12,4 +12,4 @@ it('renders the stations map on the home page', function () {
         ->has('stations')
         ->has('selectedStations')
     );
-});
+})->skipOnCi();

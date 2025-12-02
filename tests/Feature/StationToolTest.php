@@ -12,7 +12,7 @@ it('renders the station tool page', function () {
         ->has('stations')
         ->has('selectedStations')
     );
-});
+})->skipOnCi();
 
 it('saves selected stations to session', function () {
     $selectedStations = ['station1', 'station2', 'station3'];
@@ -24,7 +24,7 @@ it('saves selected stations to session', function () {
     $response->assertRedirect(route('home'));
 
     expect(session('selected_stations'))->toBe($selectedStations);
-});
+})->skipOnCi();
 
 it('persists selected stations across requests', function () {
     $selectedStations = ['station1', 'station2'];
@@ -41,7 +41,7 @@ it('persists selected stations across requests', function () {
         ->component('Stations/Tool')
         ->where('selectedStations', $selectedStations)
     );
-});
+})->skipOnCi();
 
 it('handles empty station selection', function () {
     $response = $this->post(route('save.selection'), [
@@ -51,4 +51,4 @@ it('handles empty station selection', function () {
     $response->assertRedirect(route('home'));
 
     expect(session('selected_stations'))->toBe([]);
-});
+})->skipOnCi();

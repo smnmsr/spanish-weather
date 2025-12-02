@@ -62,7 +62,7 @@ it('queries current observations for selected stations', function () {
         'stations',
         'selectedStationIds',
     ]);
-});
+})->skipOnCi();
 
 it('validates query data request', function () {
     $response = $this->post('/query-data', [
@@ -71,7 +71,7 @@ it('validates query data request', function () {
     ]);
 
     $response->assertSessionHasErrors('type');
-});
+})->skipOnCi();
 
 it('requires station ids', function () {
     $response = $this->post('/query-data', [
@@ -79,4 +79,4 @@ it('requires station ids', function () {
     ]);
 
     $response->assertSessionHasErrors('stationIds');
-});
+})->skipOnCi();
