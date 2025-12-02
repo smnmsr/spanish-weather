@@ -101,6 +101,7 @@ function saveSelection() {
 
 function resetSelection() {
     selectedIds.value.clear();
+    mapComponentRef.value?.resetView();
     saveSelection();
 }
 

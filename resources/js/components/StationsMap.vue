@@ -178,6 +178,12 @@ function invalidateSize() {
     map?.invalidateSize(true);
 }
 
+function resetView() {
+    if (!map || !markers.length) return;
+    const group = L.featureGroup(markers);
+    map.fitBounds(group.getBounds(), { padding: [20, 20] });
+}
+
 watch(
     () => props.selectedStationIds,
     () => {
@@ -195,6 +201,7 @@ onMounted(() => {
 defineExpose({
     invalidateSize,
     updateMarkers,
+    resetView,
 });
 </script>
 
