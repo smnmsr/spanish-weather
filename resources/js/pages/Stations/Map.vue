@@ -4,11 +4,19 @@ import type { BreadcrumbItemType } from '@/types';
 import { onMounted, ref } from 'vue';
 
 import L from 'leaflet';
+import markerRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIconUrl from 'leaflet/dist/images/marker-icon.png';
 import markerShadowUrl from 'leaflet/dist/images/marker-shadow.png';
 import 'leaflet/dist/leaflet.css';
 
+// In some Vite dev + Firefox setups, Leaflet detects a script path and sets
+// `L.Icon.Default.imagePath`, then concatenates it with already absolute icon
+// URLs, producing duplicated paths like: images/http://[::1]:5173/.../marker-icon.png
+// Clearing imagePath avoids the double prefix; explicit options then work.
+// @ts-ignore - imagePath exists on Icon.Default in Leaflet runtime.
+L.Icon.Default.imagePath = '';
 L.Icon.Default.mergeOptions({
+    iconRetinaUrl: markerRetinaUrl,
     iconUrl: markerIconUrl,
     shadowUrl: markerShadowUrl,
 });

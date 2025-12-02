@@ -31,6 +31,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, naming.
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
+- The App is in German, whenever writing test in the frontend, write it in German.
 - Check for existing components to reuse before writing a new one.
 - whenever possible, use only the components from https://www.shadcn-vue.com/docs/components, these are:
     - Accordion
@@ -424,7 +425,7 @@ If your application uses the `<Form>` component from Inertia, you can use Wayfin
   it('returns all', function () {
   $response = $this->postJson('/api/docs', []);
 
-            $response->assertSuccessful();
+              $response->assertSuccessful();
 
     });
     </code-snippet>
@@ -562,13 +563,13 @@ $pages->assertNoJavascriptErrors()->assertNoConsoleLogs();
 
 - When listing items, use gap utilities for spacing, don't use margins.
 
-          <code-snippet name="Valid Flex Gap Spacing Example" lang="html">
-              <div class="flex gap-8">
-                  <div>Superior</div>
-                  <div>Michigan</div>
-                  <div>Erie</div>
-              </div>
-          </code-snippet>
+            <code-snippet name="Valid Flex Gap Spacing Example" lang="html">
+                <div class="flex gap-8">
+                    <div>Superior</div>
+                    <div>Michigan</div>
+                    <div>Erie</div>
+                </div>
+            </code-snippet>
 
 ### Dark Mode
 
