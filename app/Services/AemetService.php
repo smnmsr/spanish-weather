@@ -219,7 +219,7 @@ class AemetService
      * Parse coordinate string to decimal degrees.
      * AEMET uses formats like: "40°25'00\"N" or just decimal "40.4167"
      */
-    protected function parseCoordinate(string $coordinate): float
+    public function parseCoordinate(string $coordinate): float
     {
         // If already decimal, return
         if (is_numeric($coordinate)) {
@@ -236,6 +236,22 @@ class AemetService
             $decimal = $degrees + ($minutes / 60) + ($seconds / 3600);
 
             // Apply direction (S and W are negative)
+            if (in_array($direction, ['S', 'W'])) {
+                $decimal *= -1;
+            }
+
+            return $decimal;
+        }
+
+        // Parse compact DMS format e.g., "394924N" or "025309E"
+        if (preg_match('/^(\d{2,3})(\d{2})(\d{2})([NSEW])$/', $coordinate, $matches)) {
+            $degrees = (float) $matches[1];
+            $minutes = (float) $matches[2];
+            $seconds = (float) $matches[3];
+            $direction = $matches[4];
+
+            $decimal = $degrees + ($minutes / 60) + ($seconds / 3600);
+
             if (in_array($direction, ['S', 'W'])) {
                 $decimal *= -1;
             }

@@ -2,12 +2,10 @@
 
 use App\Http\Controllers\Api\WeatherDataController;
 use App\Http\Controllers\Api\WeatherStationsController;
+use App\Http\Controllers\StationController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome');
-})->name('home');
+Route::get('/', [StationController::class, 'index'])->name('home');
 
 // API Routes for AEMET Weather Data
 Route::prefix('api')->group(function () {
