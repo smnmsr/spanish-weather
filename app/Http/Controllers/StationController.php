@@ -53,4 +53,55 @@ class StationController
 
         return redirect()->route('home')->with('success', 'Auswahl gespeichert!');
     }
+
+    public function queryData(Request $request)
+    {
+        $validated = $request->validate([
+            'type' => 'required|string|in:current-observations,daily-values,monthly-yearly-trends,extreme-values,climatological-normals',
+            'stationIds' => 'required|array',
+            'stationIds.*' => 'required|string',
+        ]);
+
+        $type = $validated['type'];
+        $stationIds = $validated['stationIds'];
+
+        // For now, only handle current-observations
+        if ($type === 'current-observations') {
+            $observations = $this->aemet->getRecentObservations();
+
+            // Filter to only selected stations
+            $filteredObservations = array_filter($observations, function ($observation) use ($stationIds) {
+                $stationId = $observation['idema'] ?? null;
+
+                return $stationId && in_array($stationId, $stationIds);
+            });
+
+            // Get station details for the selected stations
+            $allStations = $this->aemet->getAllStations();
+            $stationDetails = [];
+
+            foreach ($allStations as $station) {
+                $stationId = $station['idema'] ?? $station['indicativo'] ?? null;
+                if ($stationId && in_array($stationId, $stationIds)) {
+                    $stationDetails[$stationId] = [
+                        'id' => $stationId,
+                        'name' => $station['nombre'] ?? $station['ub'] ?? 'Unknown',
+                        'provincia' => $station['provincia'] ?? null,
+                    ];
+                }
+            }
+
+            return response()->json([
+                'queryType' => $type,
+                'observations' => array_values($filteredObservations),
+                'stations' => $stationDetails,
+                'selectedStationIds' => $stationIds,
+            ]);
+        }
+
+        // TODO: Handle other query types
+        return response()->json([
+            'error' => 'Dieser Datentyp wird noch nicht unterstützt.',
+        ], 400);
+    }
 }

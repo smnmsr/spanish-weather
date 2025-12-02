@@ -363,6 +363,7 @@ User → Frontend → PHP Backend → AEMET API
 
 ## Design Principles
 
+- **Single-Page Application**: THE USER NEVER LEAVES THE START PAGE. All interactions happen on one continuous scrollable page. Results appear underneath the selection interface, allowing users to scroll up, modify their selection (stations, time range, query type), and see updated results appear below automatically.
 - **Simple & Clean**: Focus on data visualization, minimize clutter
 - **Responsive**: Works on desktop, tablet, and mobile
 - **Fast**: Cache data when possible, show loading states
@@ -370,6 +371,7 @@ User → Frontend → PHP Backend → AEMET API
 - **Accessible**: Clear labels, color-blind friendly palettes
 - **Insight-Driven**: Not just data display, but actionable insights ("April is getting warmer", "Barcelona is your best bet for stable weather")
 - **Flexible Time Analysis**: Support both short-term (24h) and long-term (10+ years) analysis equally well
+- **Seamless Updates**: Changes to station selection or query parameters automatically trigger result updates without page navigation
 
 ## Color Scheme (Tailwind CSS)
 

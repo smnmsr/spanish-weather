@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [StationController::class, 'index'])->name('home');
 Route::post('/save-selection', [StationController::class, 'saveSelection'])->name('save.selection');
+Route::post('/query-data', [StationController::class, 'queryData'])->name('query.data');
 
 // API Routes for AEMET Weather Data
 Route::prefix('api')->group(function () {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import StationsMap from '@/components/StationsMap.vue';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -9,6 +10,15 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItemType } from '@/types';
 import type { DataQueryType } from '@/types/data-query';
@@ -19,6 +29,7 @@ import {
     BarChart,
     Calendar,
     Clock,
+    Download,
     TrendingUp,
 } from 'lucide-vue-next';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
@@ -51,6 +62,9 @@ const dataOptionsRef = ref<HTMLElement | null>(null);
 const mapComponentRef = ref<InstanceType<typeof StationsMap> | null>(null);
 const selectedIds = ref<Set<string>>(new Set(props.selectedStations));
 const selectedDataQuery = ref<DataQueryType | null>(null);
+const queryResults = ref<any>(null);
+const isLoadingResults = ref(false);
+const resultsSectionRef = ref<HTMLElement | null>(null);
 let scrollTimeout: number | null = null;
 
 const selectedCount = computed(() => selectedIds.value.size);
@@ -58,6 +72,65 @@ const selectedCount = computed(() => selectedIds.value.size);
 const selectedStations = computed(() => {
     return props.stations.filter(
         (station) => station.id && selectedIds.value.has(station.id),
+    );
+});
+
+const groupedObservations = computed(() => {
+    if (!queryResults.value?.observations) return {};
+
+    const grouped: Record<string, any[]> = {};
+    queryResults.value.observations.forEach((obs: any) => {
+        const stationId = obs.idema;
+        if (!grouped[stationId]) {
+            grouped[stationId] = [];
+        }
+        grouped[stationId].push(obs);
+    });
+
+    // Sort each station's observations by time (newest first)
+    Object.keys(grouped).forEach((stationId) => {
+        grouped[stationId].sort((a, b) => {
+            const timeA = a.fint || '';
+            const timeB = b.fint || '';
+            return timeB.localeCompare(timeA);
+        });
+    });
+
+    return grouped;
+});
+
+const queryTypeTitle = computed(() => {
+    if (!queryResults.value?.queryType) return '';
+
+    switch (queryResults.value.queryType) {
+        case 'current-observations':
+            return 'Aktuelle Beobachtungen (24h)';
+        case 'daily-values':
+            return 'Tageswerte';
+        case 'monthly-yearly-trends':
+            return 'Monatliche/Jährliche Trends';
+        case 'extreme-values':
+            return 'Extremwerte';
+        case 'climatological-normals':
+            return 'Klimanormale (1991-2020)';
+        default:
+            return 'Datenabfrage';
+    }
+});
+
+const stationsWithData = computed(() => {
+    if (!queryResults.value?.selectedStationIds) return [];
+    return queryResults.value.selectedStationIds.filter(
+        (stationId: string) => groupedObservations.value[stationId]?.length > 0,
+    );
+});
+
+const stationsWithoutData = computed(() => {
+    if (!queryResults.value?.selectedStationIds) return [];
+    return queryResults.value.selectedStationIds.filter(
+        (stationId: string) =>
+            !groupedObservations.value[stationId] ||
+            groupedObservations.value[stationId].length === 0,
     );
 });
 
@@ -158,29 +231,55 @@ function saveSelection() {
     );
 }
 
-function proceedWithDataQuery() {
+async function proceedWithDataQuery() {
     if (!selectedDataQuery.value) {
         return;
     }
 
-    // TODO: Navigate to next step or trigger data fetch
-    router.post(
-        '/query-data',
-        {
-            type: selectedDataQuery.value,
-            stationIds: Array.from(selectedIds.value),
-        },
-        {
-            onSuccess: () => {
-                // Handle success
+    isLoadingResults.value = true;
+    queryResults.value = null;
+
+    try {
+        const csrfToken =
+            document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
+                ?.content || '';
+
+        const response = await fetch('/query-data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                Accept: 'application/json',
             },
-        },
-    );
+            body: JSON.stringify({
+                type: selectedDataQuery.value,
+                stationIds: Array.from(selectedIds.value),
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        queryResults.value = await response.json();
+
+        // Scroll to results after a brief delay
+        setTimeout(() => {
+            resultsSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
+        }, 300);
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        // TODO: Show error message to user
+    } finally {
+        isLoadingResults.value = false;
+    }
 }
 
 function resetSelection() {
     selectedIds.value.clear();
     mapComponentRef.value?.resetView();
+    queryResults.value = null;
+    selectedDataQuery.value = null;
     saveSelection();
 }
 
@@ -190,6 +289,29 @@ function toggleStation(stationId: string) {
     } else {
         selectedIds.value.add(stationId);
     }
+
+    // If we have results and user changes selection, re-query automatically
+    if (queryResults.value && selectedDataQuery.value) {
+        proceedWithDataQuery();
+    }
+}
+
+function formatDate(dateString?: string): string {
+    if (!dateString) return 'N/A';
+    try {
+        const date = new Date(dateString);
+        return new Intl.DateTimeFormat('de-DE', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+        }).format(date);
+    } catch {
+        return dateString;
+    }
+}
+
+function formatValue(value: any, unit: string = ''): string {
+    if (value === undefined || value === null) return 'N/A';
+    return `${value}${unit}`;
 }
 
 onMounted(() => {
@@ -508,10 +630,259 @@ onUnmounted(() => {
                         </Button>
                         <Button
                             @click="proceedWithDataQuery"
-                            :disabled="!selectedDataQuery"
+                            :disabled="!selectedDataQuery || isLoadingResults"
                         >
-                            Daten abfragen
+                            <Spinner
+                                v-if="isLoadingResults"
+                                class="mr-2 h-4 w-4"
+                            />
+                            {{
+                                isLoadingResults ? 'Lädt...' : 'Daten abfragen'
+                            }}
                         </Button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section
+                v-if="queryResults"
+                ref="resultsSectionRef"
+                class="min-h-screen bg-white p-8 dark:bg-slate-900"
+            >
+                <div class="mx-auto max-w-7xl">
+                    <!-- Header -->
+                    <div class="mb-8 flex items-center justify-between">
+                        <div>
+                            <h2 class="mb-2 text-3xl font-bold">
+                                {{ queryTypeTitle }}
+                            </h2>
+                            <p class="text-slate-600 dark:text-slate-400">
+                                Ergebnisse für
+                                {{
+                                    queryResults.selectedStationIds?.length || 0
+                                }}
+                                Station{{
+                                    (queryResults.selectedStationIds?.length ||
+                                        0) !== 1
+                                        ? 'en'
+                                        : ''
+                                }}
+                            </p>
+                        </div>
+                        <div class="flex gap-3">
+                            <Button
+                                variant="outline"
+                                @click="queryResults = null"
+                            >
+                                Ergebnisse ausblenden
+                            </Button>
+                            <Button>
+                                <Download class="mr-2 h-4 w-4" />
+                                Daten exportieren
+                            </Button>
+                        </div>
+                    </div>
+
+                    <!-- No data message -->
+                    <div
+                        v-if="
+                            !queryResults.observations ||
+                            queryResults.observations.length === 0
+                        "
+                        class="rounded-lg border border-slate-200 bg-white p-12 text-center dark:border-slate-800 dark:bg-slate-900"
+                    >
+                        <p class="text-lg text-slate-600 dark:text-slate-400">
+                            Keine Daten verfügbar für die ausgewählten
+                            Stationen.
+                        </p>
+                    </div>
+
+                    <!-- Results by Station -->
+                    <div class="space-y-8">
+                        <!-- Alert for stations without data -->
+                        <Alert v-if="stationsWithoutData.length > 0">
+                            <AlertCircle class="h-4 w-4" />
+                            <AlertTitle>Fehlende Daten</AlertTitle>
+                            <AlertDescription>
+                                <strong>{{
+                                    stationsWithoutData.length
+                                }}</strong>
+                                von
+                                <strong>{{
+                                    queryResults.selectedStationIds?.length || 0
+                                }}</strong>
+                                Station{{
+                                    (queryResults.selectedStationIds?.length ||
+                                        0) !== 1
+                                        ? 'en'
+                                        : ''
+                                }}
+                                {{
+                                    stationsWithoutData.length === 1
+                                        ? 'hat'
+                                        : 'haben'
+                                }}
+                                keine Daten für den ausgewählten Zeitraum:
+                                <span class="font-medium">
+                                    {{
+                                        stationsWithoutData
+                                            .map(
+                                                (id: string) =>
+                                                    queryResults.stations[id]
+                                                        ?.name || id,
+                                            )
+                                            .join(', ')
+                                    }}
+                                </span>
+                            </AlertDescription>
+                        </Alert>
+
+                        <!-- Stations WITH data -->
+                        <Card
+                            v-for="stationId in stationsWithData"
+                            :key="stationId"
+                        >
+                            <CardHeader>
+                                <CardTitle>
+                                    {{
+                                        queryResults.stations[stationId]
+                                            ?.name || stationId
+                                    }}
+                                </CardTitle>
+                                <CardDescription
+                                    v-if="
+                                        queryResults.stations[stationId]
+                                            ?.provincia
+                                    "
+                                >
+                                    {{
+                                        queryResults.stations[stationId]
+                                            .provincia
+                                    }}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div class="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Zeit</TableHead>
+                                                <TableHead
+                                                    >Temperatur</TableHead
+                                                >
+                                                <TableHead
+                                                    >Luftfeuchtigkeit</TableHead
+                                                >
+                                                <TableHead
+                                                    >Niederschlag</TableHead
+                                                >
+                                                <TableHead>Wind</TableHead>
+                                                <TableHead>Druck</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            <TableRow
+                                                v-for="(
+                                                    obs, idx
+                                                ) in groupedObservations[
+                                                    stationId
+                                                ]"
+                                                :key="idx"
+                                            >
+                                                <TableCell class="font-medium">
+                                                    {{ formatDate(obs.fint) }}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {{
+                                                        formatValue(
+                                                            obs.ta,
+                                                            '°C',
+                                                        )
+                                                    }}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {{
+                                                        formatValue(obs.hr, '%')
+                                                    }}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {{
+                                                        formatValue(
+                                                            obs.prec,
+                                                            ' mm',
+                                                        )
+                                                    }}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {{
+                                                        formatValue(
+                                                            obs.vv,
+                                                            ' km/h',
+                                                        )
+                                                    }}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {{
+                                                        formatValue(
+                                                            obs.pres,
+                                                            ' hPa',
+                                                        )
+                                                    }}
+                                                </TableCell>
+                                            </TableRow>
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <!-- Stations WITHOUT data -->
+                        <Card
+                            v-for="stationId in stationsWithoutData"
+                            :key="'no-data-' + stationId"
+                            class="border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50"
+                        >
+                            <CardHeader>
+                                <div class="flex items-start gap-3">
+                                    <AlertCircle
+                                        class="mt-1 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-500"
+                                    />
+                                    <div class="flex-1">
+                                        <CardTitle
+                                            class="text-slate-700 dark:text-slate-300"
+                                        >
+                                            {{
+                                                queryResults.stations[stationId]
+                                                    ?.name || stationId
+                                            }}
+                                        </CardTitle>
+                                        <CardDescription
+                                            v-if="
+                                                queryResults.stations[stationId]
+                                                    ?.provincia
+                                            "
+                                        >
+                                            {{
+                                                queryResults.stations[stationId]
+                                                    .provincia
+                                            }}
+                                        </CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <p
+                                    class="text-sm text-slate-600 dark:text-slate-400"
+                                >
+                                    Für diese Station sind keine Daten für den
+                                    ausgewählten Zeitraum verfügbar. Dies kann
+                                    bedeuten, dass die Station diese Art von
+                                    Messungen nicht durchführt oder die Daten
+                                    derzeit nicht verfügbar sind.
+                                </p>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
             </section>
