@@ -1,4 +1,13 @@
 <script setup lang="ts">
+import {
+    Stepper,
+    StepperDescription,
+    StepperIndicator,
+    StepperItem,
+    StepperSeparator,
+    StepperTitle,
+    StepperTrigger,
+} from '@/components/ui/stepper';
 import AppLayout from '@/layouts/AppLayout.vue';
 import DataOptionsStep from '@/pages/Stations/Tool/DataOptionsStep.vue';
 import MapStep from '@/pages/Stations/Tool/MapStep.vue';
@@ -7,7 +16,8 @@ import WelcomeStep from '@/pages/Stations/Tool/WelcomeStep.vue';
 import type { BreadcrumbItemType } from '@/types';
 import type { DataQueryType } from '@/types/data-query';
 import { router } from '@inertiajs/vue3';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { ChartBar, Database, Home, Map } from 'lucide-vue-next';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 interface Station {
     id: string | null;
@@ -127,18 +137,97 @@ const chartDataByStation = computed(() => {
     return result;
 });
 
-// Icons moved to DataOptionsStep
+// Stepper steps
+const steps = [
+    {
+        step: 1,
+        title: 'Willkommen',
+        description: 'Start',
+        icon: Home,
+    },
+    {
+        step: 2,
+        title: 'Karte',
+        description: 'Stationen wählen',
+        icon: Map,
+    },
+    {
+        step: 3,
+        title: 'Datenart',
+        description: 'Analyse wählen',
+        icon: Database,
+    },
+    {
+        step: 4,
+        title: 'Resultate',
+        description: 'Ergebnisse',
+        icon: ChartBar,
+    },
+];
 
 // Current step; set from URL on mount to avoid SSR "window" issues
-const currentStep = ref<'welcome' | 'map' | 'data-options'>('welcome');
+const currentStep = ref<'welcome' | 'map' | 'data-options' | 'results'>(
+    'welcome',
+);
+const previousStep = ref<'welcome' | 'map' | 'data-options' | 'results' | null>(
+    null,
+);
+const stepsOrder: Array<'welcome' | 'map' | 'data-options' | 'results'> = [
+    'welcome',
+    'map',
+    'data-options',
+    'results',
+];
+const currentStepIndex = computed(
+    () => stepsOrder.indexOf(currentStep.value) + 1,
+);
+const stepperModelValue = ref(currentStepIndex.value);
+
+// Watch for changes in stepperModelValue and update the current step
+watch(stepperModelValue, (newIndex) => {
+    const stepName = stepsOrder[newIndex - 1];
+    if (stepName && stepName !== currentStep.value) {
+        goToStep(newIndex);
+    }
+});
+
+// Keep stepperModelValue in sync with currentStepIndex
+watch(currentStepIndex, (newIndex) => {
+    stepperModelValue.value = newIndex;
+});
+
+// Computed property to check if a step should be disabled
+const isStepDisabled = computed(() => (stepNumber: number) => {
+    // Step 1 (welcome) and 2 (map) are always enabled
+    if (stepNumber <= 2) return false;
+
+    // Step 3 (data-options) requires at least one station selected
+    if (stepNumber === 3) return selectedCount.value === 0;
+
+    // Step 4 (results) requires query results
+    if (stepNumber === 4) return !queryResults.value;
+
+    return false;
+});
+
+const isSlidingLeft = computed(() => {
+    if (!previousStep.value) return false;
+    return (
+        stepsOrder.indexOf(currentStep.value) >
+        stepsOrder.indexOf(previousStep.value)
+    );
+});
 const isMapInitialized = ref(false);
 
-function updateUrlStep(step: 'welcome' | 'map' | 'data-options') {
+function updateUrlStep(step: 'welcome' | 'map' | 'data-options' | 'results') {
+    previousStep.value = currentStep.value;
     const url = new URL(window.location.href);
     if (step === 'map') {
         url.searchParams.set('step', 'map');
     } else if (step === 'data-options') {
         url.searchParams.set('step', 'data-options');
+    } else if (step === 'results') {
+        url.searchParams.set('step', 'results');
     } else {
         url.searchParams.delete('step');
     }
@@ -184,6 +273,24 @@ function handleScroll() {
 
 function handleMapReady() {
     isMapInitialized.value = true;
+}
+
+function goToStep(stepIndex: number) {
+    const stepName = stepsOrder[stepIndex - 1];
+    if (!stepName) return;
+
+    updateUrlStep(stepName);
+
+    // Scroll to the corresponding section
+    if (stepName === 'welcome') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (stepName === 'map') {
+        mapSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
+    } else if (stepName === 'data-options') {
+        dataOptionsRef.value?.scrollIntoView({ behavior: 'smooth' });
+    } else if (stepName === 'results') {
+        resultsSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
 function goToMap() {
@@ -290,6 +397,8 @@ onMounted(() => {
         currentStep.value = 'map';
     } else if (stepParam === 'data-options') {
         currentStep.value = 'data-options';
+    } else if (stepParam === 'results') {
+        currentStep.value = 'results';
     }
 
     // Add scroll listener
@@ -329,42 +438,109 @@ onUnmounted(() => {
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col">
-            <WelcomeStep :breadcrumbs="breadcrumbs" @go-to-map="goToMap" />
+        <div class="flex min-h-[calc(100vh-64px)] flex-col">
+            <!-- Top Stepper -->
+            <div class="sticky top-0 z-20 border-b bg-background">
+                <div class="mx-auto max-w-6xl px-4 py-4">
+                    <Stepper
+                        v-model="stepperModelValue"
+                        :linear="false"
+                        class="flex w-full items-start gap-2"
+                    >
+                        <StepperItem
+                            v-for="item in steps"
+                            :key="item.step"
+                            :step="item.step"
+                            :disabled="isStepDisabled(item.step)"
+                            class="relative flex w-full flex-col items-center justify-center"
+                        >
+                            <StepperTrigger>
+                                <StepperIndicator
+                                    v-slot="{ step }"
+                                    class="bg-muted"
+                                >
+                                    <template v-if="item.icon">
+                                        <component
+                                            :is="item.icon"
+                                            class="h-4 w-4"
+                                        />
+                                    </template>
+                                    <span v-else>{{ step }}</span>
+                                </StepperIndicator>
+                            </StepperTrigger>
+                            <StepperSeparator
+                                v-if="
+                                    item.step !== steps[steps.length - 1]?.step
+                                "
+                                class="absolute top-5 right-[calc(-50%+10px)] left-[calc(50%+20px)] block h-0.5 shrink-0 rounded-full bg-muted group-data-[state=completed]:bg-primary"
+                            />
+                            <div class="flex flex-col items-center">
+                                <StepperTitle>
+                                    {{ item.title }}
+                                </StepperTitle>
+                                <StepperDescription>
+                                    {{ item.description }}
+                                </StepperDescription>
+                            </div>
+                        </StepperItem>
+                    </Stepper>
+                </div>
+            </div>
 
-            <section ref="mapSectionRef">
-                <MapStep
-                    :stations="stations"
-                    :selected-ids="selectedIds"
-                    @toggle-station="toggleStation"
-                    @reset-selection="resetSelection"
-                    @go-to-data-options="goToDataOptions"
-                    @map-ready="handleMapReady"
-                    @invalidate-map="() => {}"
-                />
-            </section>
-
-            <section v-if="selectedCount > 0" ref="dataOptionsRef">
-                <DataOptionsStep
-                    :selected-count="selectedCount"
-                    :selected-data-query="selectedDataQuery"
-                    :is-loading-results="isLoadingResults"
-                    @select-data-query="selectDataQuery"
-                    @go-to-map="goToMap"
-                    @proceed-with-data-query="proceedWithDataQuery"
-                />
-            </section>
-
-            <section v-if="queryResults" ref="resultsSectionRef">
-                <ResultsSection
-                    :results="queryResults"
-                    :stations-with-data="stationsWithData"
-                    :stations-without-data="stationsWithoutData"
-                    :chart-data-by-station="chartDataByStation"
-                    :query-type-title="queryTypeTitle"
-                    @clear-results="() => (queryResults = null)"
-                />
-            </section>
+            <!-- Slideshow Container -->
+            <div class="relative flex-1 overflow-hidden">
+                <transition
+                    :name="isSlidingLeft ? 'slide-left' : 'slide-right'"
+                    mode="out-in"
+                >
+                    <section :key="currentStep" class="absolute inset-0 h-full">
+                        <template v-if="currentStep === 'welcome'">
+                            <WelcomeStep :breadcrumbs="breadcrumbs" />
+                        </template>
+                        <template v-else-if="currentStep === 'map'">
+                            <div ref="mapSectionRef" class="h-full">
+                                <MapStep
+                                    :stations="stations"
+                                    :selected-ids="selectedIds"
+                                    @toggle-station="toggleStation"
+                                    @reset-selection="resetSelection"
+                                    @map-ready="handleMapReady"
+                                    @invalidate-map="() => {}"
+                                />
+                            </div>
+                        </template>
+                        <template v-else-if="currentStep === 'data-options'">
+                            <div ref="dataOptionsRef" class="h-full">
+                                <DataOptionsStep
+                                    :selected-count="selectedCount"
+                                    :selected-data-query="selectedDataQuery"
+                                    :is-loading-results="isLoadingResults"
+                                    @select-data-query="selectDataQuery"
+                                    @proceed-with-data-query="
+                                        proceedWithDataQuery
+                                    "
+                                />
+                            </div>
+                        </template>
+                        <template v-else-if="currentStep === 'results'">
+                            <div
+                                ref="resultsSectionRef"
+                                class="h-full overflow-auto"
+                            >
+                                <ResultsSection
+                                    :results="queryResults"
+                                    :stations-with-data="stationsWithData"
+                                    :stations-without-data="stationsWithoutData"
+                                    :chart-data-by-station="chartDataByStation"
+                                    :query-type-title="queryTypeTitle"
+                                    @clear-results="() => (queryResults = null)"
+                                />
+                            </div>
+                        </template>
+                    </section>
+                </transition>
+            </div>
+            <!-- No bottom navigation per request -->
         </div>
     </AppLayout>
 </template>
@@ -373,5 +549,30 @@ onUnmounted(() => {
 .custom-cluster-icon {
     background: transparent !important;
     border: none !important;
+}
+
+.slide-left-enter-active,
+.slide-left-leave-active,
+.slide-right-enter-active,
+.slide-right-leave-active {
+    transition:
+        transform 300ms ease,
+        opacity 300ms ease;
+}
+.slide-left-enter-from {
+    transform: translateX(100%);
+    opacity: 0.3;
+}
+.slide-left-leave-to {
+    transform: translateX(-100%);
+    opacity: 0.3;
+}
+.slide-right-enter-from {
+    transform: translateX(-100%);
+    opacity: 0.3;
+}
+.slide-right-leave-to {
+    transform: translateX(100%);
+    opacity: 0.3;
 }
 </style>
