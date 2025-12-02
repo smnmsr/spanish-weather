@@ -11,7 +11,7 @@ test('email verification screen can be rendered', function () {
     $response = $this->actingAs($user)->get(route('verification.notice'));
 
     $response->assertStatus(200);
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('email can be verified', function () {
     $user = User::factory()->unverified()->create();
@@ -29,7 +29,7 @@ test('email can be verified', function () {
     Event::assertDispatched(Verified::class);
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
     $response->assertRedirect(route('dashboard', absolute: false).'?verified=1');
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('email is not verified with invalid hash', function () {
     $user = User::factory()->unverified()->create();
@@ -46,7 +46,7 @@ test('email is not verified with invalid hash', function () {
 
     Event::assertNotDispatched(Verified::class);
     expect($user->fresh()->hasVerifiedEmail())->toBeFalse();
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('email is not verified with invalid user id', function () {
     $user = User::factory()->unverified()->create();
@@ -63,7 +63,7 @@ test('email is not verified with invalid user id', function () {
 
     Event::assertNotDispatched(Verified::class);
     expect($user->fresh()->hasVerifiedEmail())->toBeFalse();
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('verified user is redirected to dashboard from verification prompt', function () {
     $user = User::factory()->create();
@@ -74,7 +74,7 @@ test('verified user is redirected to dashboard from verification prompt', functi
 
     Event::assertNotDispatched(Verified::class);
     $response->assertRedirect(route('dashboard', absolute: false));
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('already verified user visiting verification link is redirected without firing event again', function () {
     $user = User::factory()->create();
@@ -92,4 +92,4 @@ test('already verified user visiting verification link is redirected without fir
 
     Event::assertNotDispatched(Verified::class);
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
-});
+})->skip('user and authentication features commented out (not needed at the moment)');

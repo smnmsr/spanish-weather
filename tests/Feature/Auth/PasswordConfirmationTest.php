@@ -13,10 +13,10 @@ test('confirm password screen can be rendered', function () {
     $response->assertInertia(fn (Assert $page) => $page
         ->component('auth/ConfirmPassword')
     );
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('password confirmation requires authentication', function () {
     $response = $this->get(route('password.confirm'));
 
     $response->assertRedirect(route('login'));
-});
+})->skip('user and authentication features commented out (not needed at the moment)');

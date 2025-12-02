@@ -10,7 +10,7 @@ test('profile page is displayed', function () {
         ->get(route('profile.edit'));
 
     $response->assertOk();
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('profile information can be updated', function () {
     $user = User::factory()->create();
@@ -31,7 +31,7 @@ test('profile information can be updated', function () {
     expect($user->name)->toBe('Test User');
     expect($user->email)->toBe('test@example.com');
     expect($user->email_verified_at)->toBeNull();
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('email verification status is unchanged when the email address is unchanged', function () {
     $user = User::factory()->create();
@@ -48,7 +48,7 @@ test('email verification status is unchanged when the email address is unchanged
         ->assertRedirect(route('profile.edit'));
 
     expect($user->refresh()->email_verified_at)->not->toBeNull();
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('user can delete their account', function () {
     $user = User::factory()->create();
@@ -65,7 +65,7 @@ test('user can delete their account', function () {
 
     $this->assertGuest();
     expect($user->fresh())->toBeNull();
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('correct password must be provided to delete account', function () {
     $user = User::factory()->create();
@@ -82,4 +82,4 @@ test('correct password must be provided to delete account', function () {
         ->assertRedirect(route('profile.edit'));
 
     expect($user->fresh())->not->toBeNull();
-});
+})->skip('user and authentication features commented out (not needed at the moment)');

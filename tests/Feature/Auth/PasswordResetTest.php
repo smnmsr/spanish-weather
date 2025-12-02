@@ -8,7 +8,7 @@ test('reset password link screen can be rendered', function () {
     $response = $this->get(route('password.request'));
 
     $response->assertStatus(200);
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('reset password link can be requested', function () {
     Notification::fake();
@@ -18,7 +18,7 @@ test('reset password link can be requested', function () {
     $this->post(route('password.email'), ['email' => $user->email]);
 
     Notification::assertSentTo($user, ResetPassword::class);
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('reset password screen can be rendered', function () {
     Notification::fake();
@@ -34,7 +34,7 @@ test('reset password screen can be rendered', function () {
 
         return true;
     });
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('password can be reset with valid token', function () {
     Notification::fake();
@@ -57,7 +57,7 @@ test('password can be reset with valid token', function () {
 
         return true;
     });
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('password cannot be reset with invalid token', function () {
     $user = User::factory()->create();
@@ -70,4 +70,4 @@ test('password cannot be reset with invalid token', function () {
     ]);
 
     $response->assertSessionHasErrors('email');
-});
+})->skip('user and authentication features commented out (not needed at the moment)');

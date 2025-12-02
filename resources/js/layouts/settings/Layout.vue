@@ -3,29 +3,29 @@ import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toUrl, urlIsActive } from '@/lib/utils';
-import { edit as editAppearance } from '@/routes/appearance';
-import { edit as editProfile } from '@/routes/profile';
-import { show } from '@/routes/two-factor';
-import { edit as editPassword } from '@/routes/user-password';
+// import { edit as editAppearance } from '@/routes/appearance';
+// import { edit as editProfile } from '@/routes/profile';
+// import { show } from '@/routes/two-factor';
+// import { edit as editPassword } from '@/routes/user-password';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
 
 const sidebarNavItems: NavItem[] = [
     {
         title: 'Profile',
-        href: editProfile(),
+        href: '#', // editProfile(),
     },
     {
         title: 'Password',
-        href: editPassword(),
+        href: '#', // editPassword(),
     },
     {
         title: 'Two-Factor Auth',
-        href: show(),
+        href: '#', // show(),
     },
     {
         title: 'Appearance',
-        href: editAppearance(),
+        href: '#', // editAppearance(),
     },
 ];
 

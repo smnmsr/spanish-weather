@@ -14,7 +14,7 @@ test('sends verification notification', function () {
         ->assertRedirect(route('home'));
 
     Notification::assertSentTo($user, VerifyEmail::class);
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('does not send verification notification if email is verified', function () {
     Notification::fake();
@@ -26,4 +26,4 @@ test('does not send verification notification if email is verified', function ()
         ->assertRedirect(route('dashboard', absolute: false));
 
     Notification::assertNothingSent();
-});
+})->skip('user and authentication features commented out (not needed at the moment)');

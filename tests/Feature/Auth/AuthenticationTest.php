@@ -8,7 +8,7 @@ test('login screen can be rendered', function () {
     $response = $this->get(route('login'));
 
     $response->assertStatus(200);
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('users can authenticate using the login screen', function () {
     $user = User::factory()->withoutTwoFactor()->create();
@@ -20,7 +20,7 @@ test('users can authenticate using the login screen', function () {
 
     $this->assertAuthenticated();
     $response->assertRedirect(route('dashboard', absolute: false));
-});
+})->skip('user and authentication features commented out (not needed at the moment)');
 
 test('users with two factor enabled are redirected to two factor challenge', function () {
     if (! Features::canManageTwoFactorAuthentication()) {
