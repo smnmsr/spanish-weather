@@ -11,19 +11,18 @@ import {
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItemType } from '@/types';
 import type { DataQueryType } from '@/types/data-query';
 import { DATA_QUERY_OPTIONS } from '@/types/data-query';
 import { router } from '@inertiajs/vue3';
+import {
+    VisArea,
+    VisAxis,
+    VisLine,
+    VisStackedBar,
+    VisXYContainer,
+} from '@unovis/vue';
 import {
     AlertCircle,
     BarChart,
@@ -132,6 +131,32 @@ const stationsWithoutData = computed(() => {
             !groupedObservations.value[stationId] ||
             groupedObservations.value[stationId].length === 0,
     );
+});
+
+const chartDataByStation = computed(() => {
+    const result: Record<string, any[]> = {};
+
+    Object.keys(groupedObservations.value).forEach((stationId) => {
+        const observations = groupedObservations.value[stationId];
+
+        // Sort by time (oldest first for chart)
+        const sorted = [...observations].sort((a, b) => {
+            const timeA = a.fint || '';
+            const timeB = b.fint || '';
+            return timeA.localeCompare(timeB);
+        });
+
+        // Convert to chart format
+        result[stationId] = sorted.map((obs: any) => ({
+            time: obs.fint ? new Date(obs.fint) : new Date(),
+            temperature: obs.ta !== undefined ? Number(obs.ta) : null,
+            precipitation: obs.prec !== undefined ? Number(obs.prec) : null,
+            humidity: obs.hr !== undefined ? Number(obs.hr) : null,
+            wind: obs.vv !== undefined ? Number(obs.vv) : null,
+        }));
+    });
+
+    return result;
 });
 
 const iconComponents: Record<string, any> = {
@@ -294,24 +319,6 @@ function toggleStation(stationId: string) {
     if (queryResults.value && selectedDataQuery.value) {
         proceedWithDataQuery();
     }
-}
-
-function formatDate(dateString?: string): string {
-    if (!dateString) return 'N/A';
-    try {
-        const date = new Date(dateString);
-        return new Intl.DateTimeFormat('de-DE', {
-            dateStyle: 'short',
-            timeStyle: 'short',
-        }).format(date);
-    } catch {
-        return dateString;
-    }
-}
-
-function formatValue(value: any, unit: string = ''): string {
-    if (value === undefined || value === null) return 'N/A';
-    return `${value}${unit}`;
 }
 
 onMounted(() => {
@@ -763,76 +770,103 @@ onUnmounted(() => {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div class="overflow-x-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Zeit</TableHead>
-                                                <TableHead
-                                                    >Temperatur</TableHead
-                                                >
-                                                <TableHead
-                                                    >Luftfeuchtigkeit</TableHead
-                                                >
-                                                <TableHead
-                                                    >Niederschlag</TableHead
-                                                >
-                                                <TableHead>Wind</TableHead>
-                                                <TableHead>Druck</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            <TableRow
-                                                v-for="(
-                                                    obs, idx
-                                                ) in groupedObservations[
-                                                    stationId
-                                                ]"
-                                                :key="idx"
-                                            >
-                                                <TableCell class="font-medium">
-                                                    {{ formatDate(obs.fint) }}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {{
-                                                        formatValue(
-                                                            obs.ta,
-                                                            '°C',
-                                                        )
-                                                    }}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {{
-                                                        formatValue(obs.hr, '%')
-                                                    }}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {{
-                                                        formatValue(
-                                                            obs.prec,
-                                                            ' mm',
-                                                        )
-                                                    }}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {{
-                                                        formatValue(
-                                                            obs.vv,
-                                                            ' km/h',
-                                                        )
-                                                    }}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {{
-                                                        formatValue(
-                                                            obs.pres,
-                                                            ' hPa',
-                                                        )
-                                                    }}
-                                                </TableCell>
-                                            </TableRow>
-                                        </TableBody>
-                                    </Table>
+                                <div class="h-[400px] w-full">
+                                    <VisXYContainer
+                                        :data="chartDataByStation[stationId]"
+                                        :height="400"
+                                    >
+                                        <!-- Temperature Line (Red) -->
+                                        <VisLine
+                                            :x="(d: any) => d.time"
+                                            :y="(d: any) => d.temperature"
+                                            color="#ef4444"
+                                            :line-width="2"
+                                        />
+
+                                        <!-- Precipitation Bars (Blue) -->
+                                        <VisStackedBar
+                                            :x="(d: any) => d.time"
+                                            :y="(d: any) => d.precipitation"
+                                            color="#3b82f6"
+                                            :opacity="0.6"
+                                        />
+
+                                        <!-- Humidity Area (Yellowish) -->
+                                        <VisArea
+                                            :x="(d: any) => d.time"
+                                            :y="(d: any) => d.humidity"
+                                            color="#eab308"
+                                            :opacity="0.3"
+                                        />
+
+                                        <!-- Wind Line (Magentaish) -->
+                                        <VisLine
+                                            :x="(d: any) => d.time"
+                                            :y="(d: any) => d.wind"
+                                            color="#d946ef"
+                                            :line-width="2"
+                                            :opacity="0.7"
+                                        />
+
+                                        <!-- X Axis -->
+                                        <VisAxis
+                                            type="x"
+                                            :x="(d: any) => d.time"
+                                            :tick-format="
+                                                (d: number) => {
+                                                    const date = new Date(d);
+                                                    return date.toLocaleDateString(
+                                                        'de-DE',
+                                                        {
+                                                            day: '2-digit',
+                                                            month: '2-digit',
+                                                            hour: '2-digit',
+                                                        },
+                                                    );
+                                                }
+                                            "
+                                            :grid-line="false"
+                                            :tick-line="false"
+                                        />
+
+                                        <!-- Y Axis -->
+                                        <VisAxis
+                                            type="y"
+                                            :grid-line="true"
+                                            :tick-line="false"
+                                            :domain-line="false"
+                                        />
+                                    </VisXYContainer>
+                                </div>
+
+                                <!-- Legend -->
+                                <div
+                                    class="mt-4 flex flex-wrap justify-center gap-4 text-sm"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="h-3 w-3 rounded-full bg-[#ef4444]"
+                                        ></div>
+                                        <span>Temperatur (°C)</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="h-3 w-3 rounded-sm bg-[#3b82f6] opacity-60"
+                                        ></div>
+                                        <span>Niederschlag (mm)</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="h-3 w-3 rounded-full bg-[#eab308] opacity-50"
+                                        ></div>
+                                        <span>Luftfeuchtigkeit (%)</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="h-3 w-3 rounded-full bg-[#d946ef] opacity-70"
+                                        ></div>
+                                        <span>Wind (km/h)</span>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
