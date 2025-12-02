@@ -1,9 +1,26 @@
 <script setup lang="ts">
 import StationsMap from '@/components/StationsMap.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItemType } from '@/types';
+import type { DataQueryType } from '@/types/data-query';
+import { DATA_QUERY_OPTIONS } from '@/types/data-query';
 import { router } from '@inertiajs/vue3';
+import {
+    AlertCircle,
+    BarChart,
+    Calendar,
+    Clock,
+    TrendingUp,
+} from 'lucide-vue-next';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 interface Station {
@@ -30,8 +47,10 @@ const breadcrumbs = ref<BreadcrumbItemType[]>([
 
 const welcomeRef = ref<HTMLElement | null>(null);
 const mapSectionRef = ref<HTMLElement | null>(null);
+const dataOptionsRef = ref<HTMLElement | null>(null);
 const mapComponentRef = ref<InstanceType<typeof StationsMap> | null>(null);
 const selectedIds = ref<Set<string>>(new Set(props.selectedStations));
+const selectedDataQuery = ref<DataQueryType | null>(null);
 let scrollTimeout: number | null = null;
 
 const selectedCount = computed(() => selectedIds.value.size);
@@ -42,14 +61,24 @@ const selectedStations = computed(() => {
     );
 });
 
+const iconComponents: Record<string, any> = {
+    clock: Clock,
+    calendar: Calendar,
+    'trending-up': TrendingUp,
+    'alert-circle': AlertCircle,
+    'bar-chart': BarChart,
+};
+
 // Current step; set from URL on mount to avoid SSR "window" issues
-const currentStep = ref<'welcome' | 'map'>('welcome');
+const currentStep = ref<'welcome' | 'map' | 'data-options'>('welcome');
 const isMapInitialized = ref(false);
 
-function updateUrlStep(step: 'welcome' | 'map') {
+function updateUrlStep(step: 'welcome' | 'map' | 'data-options') {
     const url = new URL(window.location.href);
     if (step === 'map') {
         url.searchParams.set('step', 'map');
+    } else if (step === 'data-options') {
+        url.searchParams.set('step', 'data-options');
     } else {
         url.searchParams.delete('step');
     }
@@ -64,11 +93,26 @@ function handleScroll() {
 
     scrollTimeout = window.setTimeout(() => {
         const mapSection = mapSectionRef.value;
+        const dataOptionsSection = dataOptionsRef.value;
+
         if (!mapSection) return;
 
-        const rect = mapSection.getBoundingClientRect();
-        // Consider the map visible if any part intersects the viewport
-        const isMapVisible = rect.top < window.innerHeight && rect.bottom > 0;
+        // Check data options section first (bottom) - only if stations are selected
+        if (dataOptionsSection && selectedCount.value > 0) {
+            const dataRect = dataOptionsSection.getBoundingClientRect();
+            const isDataVisible =
+                dataRect.top < window.innerHeight && dataRect.bottom > 0;
+
+            if (isDataVisible && currentStep.value !== 'data-options') {
+                updateUrlStep('data-options');
+                return;
+            }
+        }
+
+        // Then check map section
+        const mapRect = mapSection.getBoundingClientRect();
+        const isMapVisible =
+            mapRect.top < window.innerHeight && mapRect.bottom > 0;
 
         if (isMapVisible && currentStep.value === 'welcome') {
             updateUrlStep('map');
@@ -90,6 +134,15 @@ function goToMap() {
     }, 600);
 }
 
+function goToDataOptions() {
+    updateUrlStep('data-options');
+    dataOptionsRef.value?.scrollIntoView({ behavior: 'smooth' });
+}
+
+function selectDataQuery(queryType: DataQueryType) {
+    selectedDataQuery.value = queryType;
+}
+
 function saveSelection() {
     router.post(
         '/save-selection',
@@ -100,6 +153,26 @@ function saveSelection() {
             preserveScroll: true,
             onSuccess: () => {
                 // Show success message
+            },
+        },
+    );
+}
+
+function proceedWithDataQuery() {
+    if (!selectedDataQuery.value) {
+        return;
+    }
+
+    // TODO: Navigate to next step or trigger data fetch
+    router.post(
+        '/query-data',
+        {
+            type: selectedDataQuery.value,
+            stationIds: Array.from(selectedIds.value),
+        },
+        {
+            onSuccess: () => {
+                // Handle success
             },
         },
     );
@@ -122,8 +195,11 @@ function toggleStation(stationId: string) {
 onMounted(() => {
     // Determine step from URL safely in browser
     const params = new URLSearchParams(window.location.search);
-    if (params.get('step') === 'map') {
+    const stepParam = params.get('step');
+    if (stepParam === 'map') {
         currentStep.value = 'map';
+    } else if (stepParam === 'data-options') {
+        currentStep.value = 'data-options';
     }
 
     // Add scroll listener
@@ -137,13 +213,17 @@ onMounted(() => {
         { passive: true },
     );
 
-    // If step is map, scroll to it
+    // If step is map or data-options, scroll to it
     if (currentStep.value === 'map') {
         setTimeout(() => {
             mapSectionRef.value?.scrollIntoView({ behavior: 'auto' });
             setTimeout(() => {
                 mapComponentRef.value?.invalidateSize();
             }, 100);
+        }, 100);
+    } else if (currentStep.value === 'data-options') {
+        setTimeout(() => {
+            dataOptionsRef.value?.scrollIntoView({ behavior: 'auto' });
         }, 100);
     }
 
@@ -248,7 +328,7 @@ onUnmounted(() => {
                                 >
                                     <div
                                         v-for="station in selectedStations"
-                                        :key="station.id"
+                                        :key="station.id ?? ''"
                                         class="group flex items-start justify-between rounded-md border border-slate-200 bg-slate-50 p-3 transition-colors hover:border-blue-300 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-blue-700 dark:hover:bg-slate-700"
                                     >
                                         <div class="flex-1">
@@ -297,13 +377,140 @@ onUnmounted(() => {
                             Auswahl zurücksetzen
                         </Button>
                         <Button
-                            @click="saveSelection"
+                            @click="goToDataOptions"
                             :disabled="selectedCount === 0"
                         >
-                            {{ selectedCount }} Station{{
-                                selectedCount !== 1 ? 'en' : ''
+                            Weiter: Daten auswählen ({{
+                                selectedCount
                             }}
-                            speichern
+                            Station{{ selectedCount !== 1 ? 'en' : '' }})
+                        </Button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Options Section -->
+            <section
+                v-if="selectedCount > 0"
+                ref="dataOptionsRef"
+                class="min-h-screen bg-slate-50 p-8 dark:bg-slate-950"
+            >
+                <div class="mx-auto max-w-7xl">
+                    <div class="mb-8">
+                        <h2 class="mb-2 text-3xl font-bold">
+                            Welche Daten möchten Sie abfragen?
+                        </h2>
+                        <p class="text-slate-600 dark:text-slate-400">
+                            Wählen Sie die Art der Daten aus, die Sie für Ihre
+                            {{ selectedCount }} ausgewählte{{
+                                selectedCount !== 1 ? 'n' : ''
+                            }}
+                            Station{{ selectedCount !== 1 ? 'en' : '' }}
+                            abfragen möchten.
+                        </p>
+                    </div>
+
+                    <div
+                        class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+                    >
+                        <Card
+                            v-for="option in DATA_QUERY_OPTIONS"
+                            :key="option.type"
+                            :class="[
+                                'cursor-pointer transition-all hover:shadow-lg',
+                                selectedDataQuery === option.type
+                                    ? 'ring-2 ring-blue-500 dark:ring-blue-400'
+                                    : '',
+                            ]"
+                            @click="selectDataQuery(option.type)"
+                        >
+                            <CardHeader>
+                                <div class="flex items-start justify-between">
+                                    <component
+                                        :is="iconComponents[option.icon]"
+                                        class="h-8 w-8 text-blue-600 dark:text-blue-400"
+                                    />
+                                    <div
+                                        v-if="option.quickWin"
+                                        class="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                    >
+                                        Quick Win
+                                    </div>
+                                </div>
+                                <CardTitle class="mt-4">
+                                    {{ option.title }}
+                                </CardTitle>
+                                <CardDescription>
+                                    {{ option.description }}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div
+                                    class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400"
+                                >
+                                    <Clock class="h-4 w-4" />
+                                    <span>{{ option.estimatedTime }}</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <!-- Date Range Selection (conditionally shown) -->
+                    <div
+                        v-if="
+                            selectedDataQuery &&
+                            DATA_QUERY_OPTIONS.find(
+                                (o) => o.type === selectedDataQuery,
+                            )?.requiresDateRange
+                        "
+                        class="mt-8"
+                    >
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Zeitraum auswählen</CardTitle>
+                                <CardDescription>
+                                    Wählen Sie den gewünschten Zeitraum für Ihre
+                                    Datenabfrage.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div
+                                    class="grid grid-cols-1 gap-4 md:grid-cols-2"
+                                >
+                                    <div class="space-y-2">
+                                        <Label for="start-date"
+                                            >Startdatum</Label
+                                        >
+                                        <!-- TODO: Add date picker component -->
+                                        <input
+                                            id="start-date"
+                                            type="date"
+                                            class="w-full rounded-md border border-slate-200 p-2 dark:border-slate-800 dark:bg-slate-900"
+                                        />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <Label for="end-date">Enddatum</Label>
+                                        <!-- TODO: Add date picker component -->
+                                        <input
+                                            id="end-date"
+                                            type="date"
+                                            class="w-full rounded-md border border-slate-200 p-2 dark:border-slate-800 dark:bg-slate-900"
+                                        />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <div class="mt-8 flex justify-end gap-4">
+                        <Button variant="outline" @click="goToMap">
+                            Zurück zur Auswahl
+                        </Button>
+                        <Button
+                            @click="proceedWithDataQuery"
+                            :disabled="!selectedDataQuery"
+                        >
+                            Daten abfragen
                         </Button>
                     </div>
                 </div>
