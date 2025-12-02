@@ -7,14 +7,8 @@ import L from 'leaflet';
 import markerRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIconUrl from 'leaflet/dist/images/marker-icon.png';
 import markerShadowUrl from 'leaflet/dist/images/marker-shadow.png';
-import 'leaflet/dist/leaflet.css';
 
-// In some Vite dev + Firefox setups, Leaflet detects a script path and sets
-// `L.Icon.Default.imagePath`, then concatenates it with already absolute icon
-// URLs, producing duplicated paths like: images/http://[::1]:5173/.../marker-icon.png
-// Clearing imagePath avoids the double prefix; explicit options then work.
-// @ts-ignore - imagePath exists on Icon.Default in Leaflet runtime.
-L.Icon.Default.imagePath = '';
+// Configure default marker icons
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: markerRetinaUrl,
     iconUrl: markerIconUrl,
@@ -70,7 +64,14 @@ onMounted(() => {
         maxZoom: 18,
     }).addTo(map);
 
-    const markers: L.Layer[] = [];
+    // @ts-ignore - markerClusterGroup is added by the plugin
+    const markers = L.markerClusterGroup({
+        maxClusterRadius: 50,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+    });
+
     for (const s of props.stations) {
         const lat = parseCoordinate(s.lat);
         const lon = parseCoordinate(s.lon);
@@ -78,14 +79,10 @@ onMounted(() => {
         const marker = L.marker([lat, lon]).bindPopup(
             `<strong>${s.name}</strong>${s.provincia ? `<br/>${s.provincia}` : ''}`,
         );
-        markers.push(marker);
-        marker.addTo(map);
+        markers.addLayer(marker);
     }
 
-    if (markers.length) {
-        const group = L.featureGroup(markers);
-        map.fitBounds(group.getBounds(), { padding: [20, 20] });
-    }
+    map.addLayer(markers);
 });
 </script>
 

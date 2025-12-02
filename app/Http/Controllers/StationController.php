@@ -38,8 +38,19 @@ class StationController
             ];
         }
 
-        return Inertia::render('Stations/Map', [
+        $selectedStations = session('selected_stations', []);
+
+        return Inertia::render('Stations/Tool', [
             'stations' => $mapped,
+            'selectedStations' => $selectedStations,
         ]);
+    }
+
+    public function saveSelection(Request $request)
+    {
+        $stations = $request->input('stations', []);
+        session(['selected_stations' => $stations]);
+
+        return redirect()->route('home')->with('success', 'Auswahl gespeichert!');
     }
 }

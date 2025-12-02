@@ -6,6 +6,7 @@ use App\Http\Controllers\StationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [StationController::class, 'index'])->name('home');
+Route::post('/save-selection', [StationController::class, 'saveSelection'])->name('save.selection');
 
 // API Routes for AEMET Weather Data
 Route::prefix('api')->group(function () {
