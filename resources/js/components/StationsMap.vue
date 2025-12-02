@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 import type { MarkerCluster } from 'leaflet';
 import L from 'leaflet';
@@ -62,6 +62,10 @@ const mapRef = ref<HTMLDivElement | null>(null);
 let map: L.Map | null = null;
 let markerCluster: L.MarkerClusterGroup | null = null;
 let markers: L.Marker[] = [];
+let lightTileLayer: L.TileLayer | null = null;
+let darkTileLayer: L.TileLayer | null = null;
+
+const isDarkMode = ref(false);
 
 const isSelected = computed(() => (stationId: string | null) => {
     if (!props.selectable || !stationId) return false;
@@ -85,6 +89,33 @@ function parseCoordinate(value: string | number): number {
     return NaN;
 }
 
+function updateTileLayer() {
+    if (!map || !lightTileLayer || !darkTileLayer) return;
+
+    if (isDarkMode.value) {
+        if (map.hasLayer(lightTileLayer)) {
+            map.removeLayer(lightTileLayer);
+        }
+        if (!map.hasLayer(darkTileLayer)) {
+            map.addLayer(darkTileLayer);
+        }
+    } else {
+        if (map.hasLayer(darkTileLayer)) {
+            map.removeLayer(darkTileLayer);
+        }
+        if (!map.hasLayer(lightTileLayer)) {
+            map.addLayer(lightTileLayer);
+        }
+    }
+}
+
+function checkDarkMode() {
+    isDarkMode.value = window.matchMedia(
+        '(prefers-color-scheme: dark)',
+    ).matches;
+    updateTileLayer();
+}
+
 function initializeMap() {
     if (!mapRef.value || map) return;
 
@@ -92,10 +123,37 @@ function initializeMap() {
         scrollWheelZoom: props.scrollWheelZoom,
     }).setView(props.center, props.zoom);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 18,
-    }).addTo(map);
+    // Light mode tile layer
+    lightTileLayer = L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 18,
+        },
+    );
+
+    // Dark mode tile layer
+    darkTileLayer = L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            maxZoom: 18,
+        },
+    );
+
+    // Check initial dark mode state and add appropriate layer
+    isDarkMode.value = window.matchMedia(
+        '(prefers-color-scheme: dark)',
+    ).matches;
+    if (isDarkMode.value) {
+        darkTileLayer.addTo(map);
+    } else {
+        lightTileLayer.addTo(map);
+    }
+
+    // Listen for color scheme changes
+    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    darkModeQuery.addEventListener('change', checkDarkMode);
 
     markerCluster = L.markerClusterGroup({
         maxClusterRadius: props.maxClusterRadius,
@@ -196,6 +254,11 @@ watch(
 
 onMounted(() => {
     initializeMap();
+});
+
+onUnmounted(() => {
+    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    darkModeQuery.removeEventListener('change', checkDarkMode);
 });
 
 defineExpose({
