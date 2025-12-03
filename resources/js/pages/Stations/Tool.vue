@@ -235,6 +235,24 @@ function updateUrlStep(step: 'welcome' | 'map' | 'data-options' | 'results') {
     currentStep.value = step;
 }
 
+function updateUrlSelectionAndAnalysis() {
+    const url = new URL(window.location.href);
+    const stationsParam = Array.from(selectedIds.value).join(',');
+    if (stationsParam.length > 0) {
+        url.searchParams.set('stations', stationsParam);
+    } else {
+        url.searchParams.delete('stations');
+    }
+
+    if (selectedDataQuery.value) {
+        url.searchParams.set('analysis', String(selectedDataQuery.value));
+    } else {
+        url.searchParams.delete('analysis');
+    }
+
+    window.history.replaceState({}, '', url.toString());
+}
+
 function handleScroll() {
     if (scrollTimeout) {
         clearTimeout(scrollTimeout);
@@ -295,6 +313,8 @@ function goToStep(stepIndex: number) {
 
 function selectDataQuery(queryType: DataQueryType) {
     selectedDataQuery.value = queryType;
+    // reflect analysis in URL
+    updateUrlSelectionAndAnalysis();
 }
 
 function saveSelection() {
@@ -310,6 +330,8 @@ function saveSelection() {
             },
         },
     );
+    // reflect selection in URL
+    updateUrlSelectionAndAnalysis();
 }
 
 async function proceedWithDataQuery() {
@@ -344,6 +366,10 @@ async function proceedWithDataQuery() {
 
         queryResults.value = await response.json();
 
+        // Move to results step and persist query params
+        updateUrlStep('results');
+        updateUrlSelectionAndAnalysis();
+
         // Scroll to results after a brief delay
         setTimeout(() => {
             resultsSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
@@ -376,6 +402,7 @@ function resetSelection() {
     queryResults.value = null;
     selectedDataQuery.value = null;
     saveSelection();
+    updateUrlSelectionAndAnalysis();
 }
 
 function toggleStation(stationId: string) {
@@ -389,6 +416,9 @@ function toggleStation(stationId: string) {
     if (queryResults.value && selectedDataQuery.value) {
         proceedWithDataQuery();
     }
+
+    // persist selection in URL
+    updateUrlSelectionAndAnalysis();
 }
 
 onMounted(() => {
@@ -401,6 +431,31 @@ onMounted(() => {
         currentStep.value = 'data-options';
     } else if (stepParam === 'results') {
         currentStep.value = 'results';
+    }
+
+    // Initialize selection from URL if provided
+    const stationsParam = params.get('stations');
+    if (stationsParam) {
+        const ids = stationsParam
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
+        selectedIds.value = new Set(ids);
+    }
+
+    // Initialize analysis from URL if provided
+    const analysisParam = params.get('analysis') as DataQueryType | null;
+    if (analysisParam) {
+        selectedDataQuery.value = analysisParam as DataQueryType;
+    }
+
+    // Auto-trigger query if step=results and we have stations + analysis
+    if (
+        stepParam === 'results' &&
+        selectedIds.value.size > 0 &&
+        selectedDataQuery.value
+    ) {
+        proceedWithDataQuery();
     }
 
     // Add scroll listener
