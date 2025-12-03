@@ -293,19 +293,6 @@ function goToStep(stepIndex: number) {
     }
 }
 
-function goToMap() {
-    updateUrlStep('map');
-    mapSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
-    setTimeout(() => {
-        // invalidate handled in MapStep
-    }, 600);
-}
-
-function goToDataOptions() {
-    updateUrlStep('data-options');
-    dataOptionsRef.value?.scrollIntoView({ behavior: 'smooth' });
-}
-
 function selectDataQuery(queryType: DataQueryType) {
     selectedDataQuery.value = queryType;
 }
