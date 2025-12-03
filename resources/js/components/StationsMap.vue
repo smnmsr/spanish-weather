@@ -195,17 +195,18 @@ function updateMarkers(fitBounds = false) {
 
         const selected = isSelected.value(s.id);
 
-        // Create custom icon for selected markers
-        const icon = selected
-            ? L.icon({
-                  iconUrl: markerIconUrl,
-                  iconRetinaUrl: markerRetinaUrl,
-                  shadowUrl: markerShadowUrl,
-                  iconSize: [25, 41],
-                  iconAnchor: [12, 41],
-                  className: 'selected-marker',
-              })
-            : new L.Icon.Default();
+        // Create custom icon for both selected and unselected markers
+        const icon = L.icon({
+            iconUrl: markerIconUrl,
+            iconRetinaUrl: markerRetinaUrl,
+            shadowUrl: markerShadowUrl,
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            tooltipAnchor: [16, -28],
+            shadowSize: [41, 41],
+            className: selected ? 'selected-marker' : '',
+        });
 
         const popupContent = props.selectable
             ? `<strong>${s.name}</strong>${s.provincia ? `<br/>${s.provincia}` : ''}<br/><button class="text-blue-600 underline mt-2">${selected ? 'Abwählen' : 'Auswählen'}</button>`
