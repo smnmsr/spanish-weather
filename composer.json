@@ -41,6 +41,18 @@
         }
     },
     "scripts": {
+        "pint": "vendor/bin/pint --dirty",
+        "npm-format": "npm run format",
+        "npm-lint": "npm run lint",
+        "npm-build": "npm run build",
+        "pest": "php artisan test --parallel",
+        "precommit": [
+            "@pint",
+            "@npm-format",
+            "@npm-lint",
+            "@npm-build",
+            "@pest"
+        ],
         "setup": [
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
