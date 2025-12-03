@@ -12,6 +12,12 @@ class AemetService
 
     protected string $baseUrl;
 
+    /** Maximum retries for transient errors like 429/500 */
+    protected int $maxRetries = 3;
+
+    /** Base delay in milliseconds for exponential backoff */
+    protected int $baseDelayMs = 500;
+
     public function __construct()
     {
         $this->apiKey = config('aemet.api_key');
@@ -109,19 +115,65 @@ class AemetService
      */
     protected function makeRequest(string $endpoint): array
     {
-        // Step 1: Get the data URL
-        $response = Http::withHeaders([
-            'api_key' => $this->apiKey,
-        ])->get($this->baseUrl.$endpoint);
+        $attempt = 0;
+        $lastStatus = null;
+        $response = null;
 
-        if (! $response->successful()) {
+        while ($attempt <= $this->maxRetries) {
+            // Step 1: Get the data URL
+            $response = Http::withHeaders([
+                'api_key' => $this->apiKey,
+            ])->get($this->baseUrl.$endpoint);
+
+            $lastStatus = $response->status();
+
+            if ($response->successful()) {
+                break;
+            }
+
+            // Handle rate limiting (429) and server errors (5xx) with backoff
+            if ($lastStatus === 429 || ($lastStatus >= 500 && $lastStatus < 600)) {
+                $delayMs = $this->backoffDelayMs($attempt);
+
+                // Respect Retry-After header if present
+                $retryAfter = (int) ($response->header('Retry-After') ?? 0);
+                if ($retryAfter > 0) {
+                    // Convert seconds to milliseconds
+                    $delayMs = max($delayMs, $retryAfter * 1000);
+                }
+
+                // Log and sleep before retrying
+                Log::warning('AEMET API transient error, backing off', [
+                    'endpoint' => $endpoint,
+                    'status' => $lastStatus,
+                    'attempt' => $attempt + 1,
+                    'delay_ms' => $delayMs,
+                ]);
+
+                usleep($delayMs * 1000);
+                $attempt++;
+
+                continue;
+            }
+
+            // Non-retryable error
             Log::error('AEMET API request failed', [
                 'endpoint' => $endpoint,
-                'status' => $response->status(),
+                'status' => $lastStatus,
                 'response' => $response->body(),
             ]);
 
-            throw new \RuntimeException("AEMET API request failed: {$response->status()}");
+            throw new \RuntimeException("AEMET API request failed: {$lastStatus}");
+        }
+
+        if (! $response || ! $response->successful()) {
+            Log::error('AEMET API request failed after retries', [
+                'endpoint' => $endpoint,
+                'status' => $lastStatus,
+                'attempts' => $attempt,
+            ]);
+
+            throw new \RuntimeException("AEMET API request failed after retries: {$lastStatus}");
         }
 
         $metadata = $response->json();
@@ -136,15 +188,51 @@ class AemetService
         }
 
         // Step 2: Fetch the actual data
-        $dataResponse = Http::get($metadata['datos']);
+        $attemptData = 0;
+        $dataResponse = null;
+        $lastDataStatus = null;
 
-        if (! $dataResponse->successful()) {
+        while ($attemptData <= $this->maxRetries) {
+            $dataResponse = Http::get($metadata['datos']);
+            $lastDataStatus = $dataResponse->status();
+
+            if ($dataResponse->successful()) {
+                break;
+            }
+
+            if ($lastDataStatus === 429 || ($lastDataStatus >= 500 && $lastDataStatus < 600)) {
+                $delayMs = $this->backoffDelayMs($attemptData);
+                $retryAfter = (int) ($dataResponse->header('Retry-After') ?? 0);
+                if ($retryAfter > 0) {
+                    $delayMs = max($delayMs, $retryAfter * 1000);
+                }
+
+                Log::warning('AEMET data fetch transient error, backing off', [
+                    'url' => $metadata['datos'],
+                    'status' => $lastDataStatus,
+                    'attempt' => $attemptData + 1,
+                    'delay_ms' => $delayMs,
+                ]);
+                usleep($delayMs * 1000);
+                $attemptData++;
+
+                continue;
+            }
+
             Log::error('AEMET data fetch failed', [
                 'url' => $metadata['datos'],
-                'status' => $dataResponse->status(),
+                'status' => $lastDataStatus,
             ]);
+            throw new \RuntimeException("Failed to fetch data from AEMET: {$lastDataStatus}");
+        }
 
-            throw new \RuntimeException("Failed to fetch data from AEMET: {$dataResponse->status()}");
+        if (! $dataResponse || ! $dataResponse->successful()) {
+            Log::error('AEMET data fetch failed after retries', [
+                'url' => $metadata['datos'],
+                'status' => $lastDataStatus,
+                'attempts' => $attemptData,
+            ]);
+            throw new \RuntimeException("Failed to fetch data from AEMET after retries: {$lastDataStatus}");
         }
 
         // AEMET API may return data with encoding issues (Spanish characters)
@@ -279,5 +367,14 @@ class AemetService
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 
         return $earthRadius * $c;
+    }
+
+    protected function backoffDelayMs(int $attempt): int
+    {
+        // Jittered exponential backoff: base * 2^attempt +/- 20%
+        $delay = $this->baseDelayMs * (2 ** $attempt);
+        $jitterFactor = mt_rand(80, 120) / 100; // 0.8 - 1.2
+
+        return (int) ($delay * $jitterFactor);
     }
 }

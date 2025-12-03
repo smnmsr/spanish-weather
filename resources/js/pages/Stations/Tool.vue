@@ -348,9 +348,24 @@ async function proceedWithDataQuery() {
         setTimeout(() => {
             resultsSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
         }, 300);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching data:', error);
-        // TODO: Show error message to user
+        // Notify UI about outage if 500 or network
+        const status =
+            error?.status ??
+            (error instanceof Response ? error.status : undefined);
+        if (status === 500) {
+            window.dispatchEvent(
+                new CustomEvent('aemet:outage', {
+                    detail: {
+                        status,
+                        type: 'server_error',
+                    },
+                }),
+            );
+        }
+        // Gracefully clear current results
+        queryResults.value = null;
     } finally {
         isLoadingResults.value = false;
     }

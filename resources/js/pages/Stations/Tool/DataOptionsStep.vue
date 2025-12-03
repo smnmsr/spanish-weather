@@ -7,6 +7,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Drawer, DrawerClose, DrawerContent } from '@/components/ui/drawer';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import type { DataQueryType } from '@/types/data-query';
@@ -16,8 +17,10 @@ import {
     BarChart,
     Calendar,
     Clock,
+    CloudOff,
     TrendingUp,
 } from 'lucide-vue-next';
+import { ref } from 'vue';
 
 const iconComponents: Record<string, any> = {
     clock: Clock,
@@ -40,6 +43,25 @@ const emit = defineEmits<{
     (e: 'go-to-map'): void;
     (e: 'proceed-with-data-query'): void;
 }>();
+
+// Error Drawer state
+const showOutageDrawer = ref(false);
+
+// Intercept proceed emission to allow UI error handling based on fetch errors
+function handleProceed() {
+    // Emit and expect parent to perform fetch; event contract: parent dispatches
+    // technical event on error: `new CustomEvent('aemet:outage', { detail: { status, type } })`
+    emit('proceed-with-data-query');
+}
+
+function attachOutageListener() {
+    const listener = () => {
+        showOutageDrawer.value = true;
+    };
+    window.addEventListener('aemet:outage', listener);
+}
+
+attachOutageListener();
 </script>
 
 <template>
@@ -145,7 +167,7 @@ const emit = defineEmits<{
                     >Zurück zur Auswahl</Button
                 >
                 <Button
-                    @click="emit('proceed-with-data-query')"
+                    @click="handleProceed"
                     :disabled="
                         !props.selectedDataQuery || props.isLoadingResults
                     "
@@ -158,5 +180,38 @@ const emit = defineEmits<{
                 </Button>
             </div>
         </div>
+
+        <!-- Outage Drawer -->
+        <Drawer v-model:open="showOutageDrawer">
+            <DrawerContent>
+                <div class="mx-auto w-full max-w-md px-8 py-12">
+                    <div class="flex flex-col items-center gap-8 text-center">
+                        <CloudOff
+                            class="h-20 w-20 text-blue-600 dark:text-blue-400"
+                        />
+
+                        <div class="space-y-3">
+                            <h2
+                                class="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50"
+                            >
+                                Der Spanische Wetterdienst macht gerade Siesta
+                            </h2>
+                            <p
+                                class="text-lg text-slate-600 dark:text-slate-400"
+                            >
+                                Die API des Spanischen Wetterdiensts (AEMET) ist
+                                derzeit nicht erreichbar. Das passiert
+                                einigermassen oft, leider. Bite versuche es in
+                                ca. 10 Minuten erneut.
+                            </p>
+                        </div>
+
+                        <DrawerClose as-child>
+                            <Button size="lg" class="mt-4"> Alles klar </Button>
+                        </DrawerClose>
+                    </div>
+                </div>
+            </DrawerContent>
+        </Drawer>
     </section>
 </template>

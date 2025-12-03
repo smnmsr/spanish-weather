@@ -199,6 +199,13 @@ protected function isAccessible(User $user, ?string $path = null): bool
 
 - Typically, keys in an Enum should be TitleCase. For example: `FavoritePerson`, `BestLake`, `Monthly`.
 
+=== herd rules ===
+
+## Laravel Herd
+
+- The application is served by Laravel Herd and will be available at: https?://[kebab-case-project-dir].test. Use the `get-absolute-url` tool to generate URLs for the user to ensure valid URLs.
+- You must not run any commands to make the site available via HTTP(s). It is _always_ available through Laravel Herd.
+
 === tests rules ===
 
 ## Test Enforcement
@@ -425,7 +432,7 @@ If your application uses the `<Form>` component from Inertia, you can use Wayfin
   it('returns all', function () {
   $response = $this->postJson('/api/docs', []);
 
-              $response->assertSuccessful();
+          $response->assertSuccessful();
 
     });
     </code-snippet>
@@ -563,13 +570,13 @@ $pages->assertNoJavascriptErrors()->assertNoConsoleLogs();
 
 - When listing items, use gap utilities for spacing, don't use margins.
 
-            <code-snippet name="Valid Flex Gap Spacing Example" lang="html">
-                <div class="flex gap-8">
-                    <div>Superior</div>
-                    <div>Michigan</div>
-                    <div>Erie</div>
-                </div>
-            </code-snippet>
+        <code-snippet name="Valid Flex Gap Spacing Example" lang="html">
+            <div class="flex gap-8">
+                <div>Superior</div>
+                <div>Michigan</div>
+                <div>Erie</div>
+            </div>
+        </code-snippet>
 
 ### Dark Mode
 
