@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProjectInfoHoverCard from '@/components/ProjectInfoHoverCard.vue';
 import { Button } from '@/components/ui/button';
 import type { BreadcrumbItemType } from '@/types';
 
@@ -14,6 +15,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
+    <ProjectInfoHoverCard />
     <section class="flex min-h-screen flex-col items-center justify-center p-8">
         <div class="max-w-2xl text-center">
             <h1 class="mb-6 text-5xl font-bold">¡Hola Meteo!</h1>
