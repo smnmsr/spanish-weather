@@ -65,7 +65,7 @@ attachOutageListener();
 </script>
 
 <template>
-    <section class="min-h-screen bg-slate-50 p-8 dark:bg-slate-950">
+    <section class="min-h-screen p-8">
         <div class="mx-auto max-w-7xl">
             <div class="mb-8">
                 <h2 class="mb-2 text-3xl font-bold">
@@ -146,7 +146,7 @@ attachOutageListener();
                                 <input
                                     id="start-date"
                                     type="date"
-                                    class="w-full rounded-md border border-slate-200 p-2 dark:border-slate-800 dark:bg-slate-900"
+                                    class="w-full rounded-md border border-border bg-input p-2"
                                 />
                             </div>
                             <div class="space-y-2">
@@ -154,7 +154,7 @@ attachOutageListener();
                                 <input
                                     id="end-date"
                                     type="date"
-                                    class="w-full rounded-md border border-slate-200 p-2 dark:border-slate-800 dark:bg-slate-900"
+                                    class="w-full rounded-md border border-border bg-input p-2"
                                 />
                             </div>
                         </div>
