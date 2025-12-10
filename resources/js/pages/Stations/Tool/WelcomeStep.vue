@@ -16,16 +16,14 @@ const emit = defineEmits<{
 <template>
     <section class="flex min-h-screen flex-col items-center justify-center p-8">
         <div class="max-w-2xl text-center">
-            <h1 class="mb-6 text-5xl font-bold">
-                Willkommen zum Stations-Tool
-            </h1>
+            <h1 class="mb-6 text-5xl font-bold">¡Hola Meteo!</h1>
             <p class="mb-8 text-lg text-slate-600 dark:text-slate-400">
-                Dieses Tool hilft Ihnen, Wetterstationen aus dem AEMET-Netzwerk
-                auszuwählen und relevante Variablen zu speichern. Wählen Sie die
-                Stationen aus, die für Ihre Analyse wichtig sind.
+                Entdecke Spaniens Wettervielfalt in Sekunden: Finde
+                Wetterstationen auf der Karte, sichere genau die Variablen, die
+                du brauchst, und starte direkt in die Auswertung.
             </p>
             <Button size="lg" @click="emit('go-to-map')">
-                Weiter zur Karte
+                Auf zur interaktiven Karte
             </Button>
         </div>
     </section>

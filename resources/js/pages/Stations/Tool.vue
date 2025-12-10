@@ -503,7 +503,10 @@ onUnmounted(() => {
                 >
                     <section :key="currentStep" class="absolute inset-0 h-full">
                         <template v-if="currentStep === 'welcome'">
-                            <WelcomeStep :breadcrumbs="breadcrumbs" />
+                            <WelcomeStep
+                                :breadcrumbs="breadcrumbs"
+                                @go-to-map="goToStep(2)"
+                            />
                         </template>
                         <template v-else-if="currentStep === 'map'">
                             <div ref="mapSectionRef" class="h-full">
@@ -523,6 +526,7 @@ onUnmounted(() => {
                                     :selected-count="selectedCount"
                                     :selected-data-query="selectedDataQuery"
                                     :is-loading-results="isLoadingResults"
+                                    @go-to-map="goToStep(2)"
                                     @select-data-query="selectDataQuery"
                                     @proceed-with-data-query="
                                         proceedWithDataQuery
