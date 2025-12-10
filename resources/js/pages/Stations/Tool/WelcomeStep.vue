@@ -14,9 +14,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-    <section
-        class="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-white p-8 dark:from-slate-950 dark:to-slate-900"
-    >
+    <section class="flex min-h-screen flex-col items-center justify-center p-8">
         <div class="max-w-2xl text-center">
             <h1 class="mb-6 text-5xl font-bold">
                 Willkommen zum Stations-Tool

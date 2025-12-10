@@ -28,7 +28,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-    <section class="min-h-screen bg-white p-8 dark:bg-slate-900">
+    <section class="min-h-screen p-8">
         <div class="mx-auto max-w-7xl">
             <div class="mb-8 flex items-center justify-between">
                 <div>

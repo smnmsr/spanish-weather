@@ -4,7 +4,6 @@ import {
     StepperDescription,
     StepperIndicator,
     StepperItem,
-    StepperSeparator,
     StepperTitle,
     StepperTrigger,
 } from '@/components/ui/stepper';
@@ -495,55 +494,7 @@ onUnmounted(() => {
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex min-h-[calc(100vh-64px)] flex-col">
-            <!-- Top Stepper -->
-            <div class="sticky top-0 z-20 border-b bg-background">
-                <div class="mx-auto max-w-6xl px-4 py-4">
-                    <Stepper
-                        v-model="stepperModelValue"
-                        :linear="false"
-                        class="flex w-full items-start gap-2"
-                    >
-                        <StepperItem
-                            v-for="item in steps"
-                            :key="item.step"
-                            :step="item.step"
-                            :disabled="isStepDisabled(item.step)"
-                            class="relative flex w-full flex-col items-center justify-center"
-                        >
-                            <StepperTrigger>
-                                <StepperIndicator
-                                    v-slot="{ step }"
-                                    class="bg-muted"
-                                >
-                                    <template v-if="item.icon">
-                                        <component
-                                            :is="item.icon"
-                                            class="h-4 w-4"
-                                        />
-                                    </template>
-                                    <span v-else>{{ step }}</span>
-                                </StepperIndicator>
-                            </StepperTrigger>
-                            <StepperSeparator
-                                v-if="
-                                    item.step !== steps[steps.length - 1]?.step
-                                "
-                                class="absolute top-5 right-[calc(-50%+10px)] left-[calc(50%+20px)] block h-0.5 shrink-0 rounded-full bg-muted group-data-[state=completed]:bg-primary"
-                            />
-                            <div class="flex flex-col items-center">
-                                <StepperTitle>
-                                    {{ item.title }}
-                                </StepperTitle>
-                                <StepperDescription>
-                                    {{ item.description }}
-                                </StepperDescription>
-                            </div>
-                        </StepperItem>
-                    </Stepper>
-                </div>
-            </div>
-
+        <div class="flex h-screen flex-col">
             <!-- Slideshow Container -->
             <div class="relative flex-1 overflow-hidden">
                 <transition
@@ -597,7 +548,54 @@ onUnmounted(() => {
                     </section>
                 </transition>
             </div>
-            <!-- No bottom navigation per request -->
+
+            <!-- Bottom Stepper -->
+            <div>
+                <div class="mx-auto max-w-6xl px-4 py-4">
+                    <Stepper
+                        v-model="stepperModelValue"
+                        :linear="false"
+                        class="flex w-full items-start gap-2"
+                    >
+                        <StepperItem
+                            v-for="item in steps"
+                            :key="item.step"
+                            :step="item.step"
+                            :disabled="isStepDisabled(item.step)"
+                            class="relative flex w-full flex-col items-center justify-center"
+                        >
+                            <StepperTrigger>
+                                <StepperIndicator
+                                    v-slot="{ step }"
+                                    class="bg-muted"
+                                >
+                                    <template v-if="item.icon">
+                                        <component
+                                            :is="item.icon"
+                                            class="h-4 w-4"
+                                        />
+                                    </template>
+                                    <span v-else>{{ step }}</span>
+                                </StepperIndicator>
+                            </StepperTrigger>
+                            <StepperSeparator
+                                v-if="
+                                    item.step !== steps[steps.length - 1]?.step
+                                "
+                                class="absolute top-7 right-[calc(-50%+10px)] left-[calc(50%+20px)] block h-0.5 shrink-0 rounded-full bg-muted group-data-[state=completed]:bg-primary"
+                            />
+                            <div class="flex flex-col items-center">
+                                <StepperTitle>
+                                    {{ item.title }}
+                                </StepperTitle>
+                                <StepperDescription>
+                                    {{ item.description }}
+                                </StepperDescription>
+                            </div>
+                        </StepperItem>
+                    </Stepper>
+                </div>
+            </div>
         </div>
     </AppLayout>
 </template>
