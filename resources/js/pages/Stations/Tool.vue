@@ -358,6 +358,7 @@ async function proceedWithDataQuery() {
         queryResults.value = await response.json();
 
         // Move to results step and persist query params
+        // Automatic data fetching has been disabled. User must manually fetch data now.
         updateUrlStep('results');
         updateUrlSelectionAndAnalysis();
 
@@ -407,11 +408,6 @@ function toggleStation(stationId: string) {
             return;
         }
         selectedIds.value.add(stationId);
-    }
-
-    // If we have results and user changes selection, re-query automatically
-    if (queryResults.value && selectedDataQuery.value) {
-        proceedWithDataQuery();
     }
 
     // persist selection in URL
