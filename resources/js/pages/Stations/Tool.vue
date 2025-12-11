@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
     Stepper,
-    StepperDescription,
     StepperIndicator,
     StepperItem,
     StepperTitle,
@@ -24,6 +23,7 @@ interface Station {
     lat: string | number;
     lon: string | number;
     provincia?: string | null;
+    altitude?: number | null;
 }
 
 interface Props {
@@ -405,9 +405,15 @@ function resetSelection() {
 }
 
 function toggleStation(stationId: string) {
+    const MAX_STATIONS = 5;
+
     if (selectedIds.value.has(stationId)) {
         selectedIds.value.delete(stationId);
     } else {
+        // Prevent adding more than MAX_STATIONS
+        if (selectedIds.value.size >= MAX_STATIONS) {
+            return;
+        }
         selectedIds.value.add(stationId);
     }
 
@@ -515,6 +521,7 @@ onUnmounted(() => {
                                     :selected-ids="selectedIds"
                                     @toggle-station="toggleStation"
                                     @reset-selection="resetSelection"
+                                    @go-to-data-options="goToStep(3)"
                                     @map-ready="handleMapReady"
                                     @invalidate-map="() => {}"
                                 />
@@ -553,13 +560,13 @@ onUnmounted(() => {
                 </transition>
             </div>
 
-            <!-- Bottom Stepper -->
-            <div>
-                <div class="mx-auto max-w-6xl px-4 py-4">
+            <!-- Bottom Stepper - Compact -->
+            <div class="border-t">
+                <div class="mx-auto max-w-6xl px-3 py-2 sm:px-4 sm:py-3">
                     <Stepper
                         v-model="stepperModelValue"
                         :linear="false"
-                        class="flex w-full items-start gap-2"
+                        class="flex w-full items-start gap-1 sm:gap-2"
                     >
                         <StepperItem
                             v-for="item in steps"
@@ -571,30 +578,31 @@ onUnmounted(() => {
                             <StepperTrigger>
                                 <StepperIndicator
                                     v-slot="{ step }"
-                                    class="bg-muted"
+                                    class="h-8 w-8 bg-muted sm:h-10 sm:w-10"
                                 >
                                     <template v-if="item.icon">
                                         <component
                                             :is="item.icon"
-                                            class="h-4 w-4"
+                                            class="h-3 w-3 sm:h-4 sm:w-4"
                                         />
                                     </template>
-                                    <span v-else>{{ step }}</span>
+                                    <span v-else class="text-xs">{{
+                                        step
+                                    }}</span>
                                 </StepperIndicator>
                             </StepperTrigger>
                             <StepperSeparator
                                 v-if="
                                     item.step !== steps[steps.length - 1]?.step
                                 "
-                                class="absolute top-7 right-[calc(-50%+10px)] left-[calc(50%+20px)] block h-0.5 shrink-0 rounded-full bg-muted group-data-[state=completed]:bg-primary"
+                                class="absolute top-5 right-[calc(-50%+10px)] left-[calc(50%+20px)] block h-0.5 shrink-0 rounded-full bg-muted group-data-[state=completed]:bg-primary sm:top-6"
                             />
-                            <div class="flex flex-col items-center">
-                                <StepperTitle>
+                            <div
+                                class="mt-1 hidden flex-col items-center sm:flex"
+                            >
+                                <StepperTitle class="text-xs">
                                     {{ item.title }}
                                 </StepperTitle>
-                                <StepperDescription>
-                                    {{ item.description }}
-                                </StepperDescription>
                             </div>
                         </StepperItem>
                     </Stepper>

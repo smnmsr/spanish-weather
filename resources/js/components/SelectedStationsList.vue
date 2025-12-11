@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { MapPin, Mountain, X } from 'lucide-vue-next';
+
 interface Station {
     id: string | null;
     name: string;
     lat: string | number;
     lon: string | number;
     provincia?: string | null;
+    altitude?: number | null;
 }
 
 interface Props {
@@ -16,59 +19,70 @@ defineProps<Props>();
 const emit = defineEmits<{
     (e: 'remove', id: string): void;
 }>();
+
+function formatCoordinate(lat: string | number, lon: string | number): string {
+    const latNum = typeof lat === 'number' ? lat : parseFloat(String(lat));
+    const lonNum = typeof lon === 'number' ? lon : parseFloat(String(lon));
+    return `${latNum.toFixed(4)}°, ${lonNum.toFixed(4)}°`;
+}
 </script>
 
 <template>
     <div
-        class="rounded-lg border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-800 dark:bg-slate-900"
+        v-if="stations.length === 0"
+        class="py-8 text-center text-muted-foreground"
     >
-        <h3 class="mb-4 text-xl font-semibold">Ausgewählte Stationen</h3>
+        <p class="text-sm">Keine Stationen ausgewählt</p>
+        <p class="mt-2 text-xs">
+            Klicken Sie auf die Marker auf der Karte, um Stationen auszuwählen.
+        </p>
+    </div>
 
+    <div v-else class="grid gap-3 sm:grid-cols-2">
         <div
-            v-if="stations.length === 0"
-            class="text-center text-slate-500 dark:text-slate-400"
+            v-for="station in stations"
+            :key="station.id ?? ''"
+            class="group relative overflow-hidden rounded-lg border bg-card transition-all hover:border-primary/50 hover:shadow-md"
         >
-            <p class="text-sm">Keine Stationen ausgewählt</p>
-            <p class="mt-2 text-xs">
-                Klicken Sie auf die Marker auf der Karte, um Stationen
-                auszuwählen.
-            </p>
-        </div>
+            <div class="flex items-start gap-3 p-4">
+                <div class="min-w-0 flex-1 space-y-2">
+                    <div>
+                        <h4 class="truncate leading-tight font-semibold">
+                            {{ station.name }}
+                        </h4>
+                        <p
+                            v-if="station.provincia"
+                            class="truncate text-sm text-muted-foreground"
+                        >
+                            {{ station.provincia }}
+                        </p>
+                    </div>
 
-        <div v-else class="max-h-[60vh] space-y-2 overflow-y-auto">
-            <div
-                v-for="station in stations"
-                :key="station.id ?? ''"
-                class="group flex items-start justify-between rounded-md border border-slate-200 bg-slate-50 p-3 transition-colors hover:border-blue-300 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-blue-700 dark:hover:bg-slate-700"
-            >
-                <div class="flex-1">
-                    <p class="font-medium text-slate-900 dark:text-slate-100">
-                        {{ station.name }}
-                    </p>
-                    <p
-                        v-if="station.provincia"
-                        class="text-sm text-slate-600 dark:text-slate-400"
-                    >
-                        {{ station.provincia }}
-                    </p>
+                    <div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
+                        <div
+                            class="flex items-center gap-1 text-muted-foreground"
+                        >
+                            <MapPin class="h-3.5 w-3.5" />
+                            <span class="font-mono">{{
+                                formatCoordinate(station.lat, station.lon)
+                            }}</span>
+                        </div>
+                        <div
+                            v-if="station.altitude"
+                            class="flex items-center gap-1 text-muted-foreground"
+                        >
+                            <Mountain class="h-3.5 w-3.5" />
+                            <span>{{ station.altitude }} m</span>
+                        </div>
+                    </div>
                 </div>
+
                 <button
                     @click="emit('remove', station.id!)"
-                    class="ml-2 rounded p-1 text-slate-400 transition-colors hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                    title="Entfernen"
+                    class="flex-shrink-0 rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    title="Aus Liste entfernen"
                 >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                    >
-                        <path
-                            fill-rule="evenodd"
-                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                            clip-rule="evenodd"
-                        />
-                    </svg>
+                    <X class="h-3.5 w-3.5" />
                 </button>
             </div>
         </div>

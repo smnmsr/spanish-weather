@@ -169,4 +169,23 @@
     body {
         @apply bg-background text-foreground;
     }
+    
+    /* Control Leaflet map z-index to keep it below dialogs/sheets */
+    .leaflet-pane,
+    .leaflet-tile-pane,
+    .leaflet-overlay-pane,
+    .leaflet-shadow-pane,
+    .leaflet-marker-pane,
+    .leaflet-tooltip-pane,
+    .leaflet-popup-pane,
+    .leaflet-map-pane,
+    .leaflet-control,
+    .leaflet-top,
+    .leaflet-bottom {
+        z-index: auto !important;
+    }
+    
+    .leaflet-container {
+        z-index: 0 !important;
+    }
 }

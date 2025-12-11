@@ -35,6 +35,7 @@ class StationController
                 'lat' => $lat,
                 'lon' => $lon,
                 'provincia' => $station['provincia'] ?? null,
+                'altitude' => isset($station['altitud']) ? (int) $station['altitud'] : null,
             ];
         }
 
