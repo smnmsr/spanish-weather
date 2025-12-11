@@ -6,12 +6,8 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import type { StationInfo } from '@/types/station';
 import { AlertCircle } from 'lucide-vue-next';
-
-interface StationInfo {
-    name?: string;
-    provincia?: string | null;
-}
 
 interface Props {
     title: string;

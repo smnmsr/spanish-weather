@@ -12,16 +12,8 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet';
+import type { Station } from '@/types/station';
 import { computed, ref } from 'vue';
-
-interface Station {
-    id: string | null;
-    name: string;
-    lat: string | number;
-    lon: string | number;
-    provincia?: string | null;
-    altitude?: number | null;
-}
 
 interface Props {
     stations: Station[];
