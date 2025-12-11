@@ -1,26 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-
 import type { MarkerCluster } from 'leaflet';
 import L from 'leaflet';
-import markerRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIconUrl from 'leaflet/dist/images/marker-icon.png';
-import markerShadowUrl from 'leaflet/dist/images/marker-shadow.png';
+import type { Station } from '@/types/station';
+import {
+    configureDefaultMarkerIcons,
+    createMarkerIcon,
+    createClusterIcon,
+    parseCoordinate,
+} from '@/lib/leaflet-utils';
 
-// Configure default marker icons
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: markerRetinaUrl,
-    iconUrl: markerIconUrl,
-    shadowUrl: markerShadowUrl,
-});
-
-interface Station {
-    id: string | null;
-    name: string;
-    lat: string | number;
-    lon: string | number;
-    provincia?: string | null;
-}
+configureDefaultMarkerIcons();
 
 interface Props {
     stations: Station[];
@@ -71,23 +61,6 @@ const isSelected = computed(() => (stationId: string | null) => {
     if (!props.selectable || !stationId) return false;
     return props.selectedStationIds.has(stationId);
 });
-
-function parseCoordinate(value: string | number): number {
-    if (typeof value === 'number') return value;
-    const num = Number(value);
-    if (!Number.isNaN(num)) return num;
-    const match = value.match(/(\d+)°(\d+)'(\d+)"([NSEW])/);
-    if (match) {
-        const degrees = Number(match[1]);
-        const minutes = Number(match[2]);
-        const seconds = Number(match[3]);
-        const direction = match[4];
-        let decimal = degrees + minutes / 60 + seconds / 3600;
-        if (direction === 'S' || direction === 'W') decimal *= -1;
-        return decimal;
-    }
-    return NaN;
-}
 
 function updateTileLayer() {
     if (!map || !lightTileLayer || !darkTileLayer) return;
@@ -160,14 +133,8 @@ function initializeMap() {
         spiderfyOnMaxZoom: true,
         showCoverageOnHover: props.showCoverageOnHover,
         zoomToBoundsOnClick: true,
-        iconCreateFunction: function (cluster: MarkerCluster) {
-            const count = cluster.getChildCount();
-            return L.divIcon({
-                html: `<div style="background-color: rgba(100, 116, 139, 0.6); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><span style="background-color: rgba(71, 85, 105, 0.8); color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">${count}</span></div>`,
-                className: 'custom-cluster-icon',
-                iconSize: L.point(40, 40),
-            });
-        },
+        iconCreateFunction: (cluster: MarkerCluster) =>
+            createClusterIcon(cluster.getChildCount()),
     });
 
     map.addLayer(markerCluster);
@@ -194,19 +161,7 @@ function updateMarkers(fitBounds = false) {
         if (Number.isNaN(lat) || Number.isNaN(lon)) continue;
 
         const selected = isSelected.value(s.id);
-
-        // Create custom icon for both selected and unselected markers
-        const icon = L.icon({
-            iconUrl: markerIconUrl,
-            iconRetinaUrl: markerRetinaUrl,
-            shadowUrl: markerShadowUrl,
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            tooltipAnchor: [16, -28],
-            shadowSize: [41, 41],
-            className: selected ? 'selected-marker' : '',
-        });
+        const icon = createMarkerIcon(selected);
 
         const popupContent = props.selectable
             ? `<strong>${s.name}</strong>${s.provincia ? `<br/>${s.provincia}` : ''}<br/><button class="text-blue-600 underline mt-2">${selected ? 'Abwählen' : 'Auswählen'}</button>`

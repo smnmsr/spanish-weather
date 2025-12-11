@@ -1,14 +1,6 @@
 <script setup lang="ts">
 import { MapPin, Mountain, X } from 'lucide-vue-next';
-
-interface Station {
-    id: string | null;
-    name: string;
-    lat: string | number;
-    lon: string | number;
-    provincia?: string | null;
-    altitude?: number | null;
-}
+import type { Station } from '@/types/station';
 
 interface Props {
     stations: Station[];

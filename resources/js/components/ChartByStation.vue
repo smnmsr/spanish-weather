@@ -6,18 +6,31 @@ import {
     VisStackedBar,
     VisXYContainer,
 } from '@unovis/vue';
+import type { ChartDataPoint } from '@/types/station';
+import ChartLegend from '@/components/ChartLegend.vue';
 
 interface Props {
-    data: Array<{
-        time: Date;
-        temperature: number | null;
-        precipitation: number | null;
-        humidity: number | null;
-        wind: number | null;
-    }>;
+    data: ChartDataPoint[];
 }
 
 defineProps<Props>();
+
+const legendItems = [
+    { label: 'Temperatur (°C)', color: '#ef4444', shape: 'circle' as const },
+    {
+        label: 'Niederschlag (mm)',
+        color: '#3b82f6',
+        shape: 'square' as const,
+        opacity: 0.6,
+    },
+    {
+        label: 'Luftfeuchtigkeit (%)',
+        color: '#eab308',
+        shape: 'circle' as const,
+        opacity: 0.5,
+    },
+    { label: 'Wind (km/h)', color: '#d946ef', shape: 'circle' as const, opacity: 0.7 },
+];
 </script>
 
 <template>
@@ -72,22 +85,5 @@ defineProps<Props>();
             />
         </VisXYContainer>
     </div>
-    <div class="mt-4 flex flex-wrap justify-center gap-4 text-sm">
-        <div class="flex items-center gap-2">
-            <div class="h-3 w-3 rounded-full bg-[#ef4444]"></div>
-            <span>Temperatur (°C)</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <div class="h-3 w-3 rounded-sm bg-[#3b82f6] opacity-60"></div>
-            <span>Niederschlag (mm)</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <div class="h-3 w-3 rounded-full bg-[#eab308] opacity-50"></div>
-            <span>Luftfeuchtigkeit (%)</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <div class="h-3 w-3 rounded-full bg-[#d946ef] opacity-70"></div>
-            <span>Wind (km/h)</span>
-        </div>
-    </div>
+    <ChartLegend :items="legendItems" />
 </template>

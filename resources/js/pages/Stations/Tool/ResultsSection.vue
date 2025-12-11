@@ -3,14 +3,8 @@ import StationCard from '@/components/StationCard.vue';
 import StationNoDataCard from '@/components/StationNoDataCard.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import type { QueryResults } from '@/types/station';
 import { AlertCircle, Download } from 'lucide-vue-next';
-
-interface QueryResults {
-    queryType?: string;
-    selectedStationIds?: string[];
-    stations: Record<string, { name?: string; provincia?: string | null }>;
-    observations?: any[];
-}
 
 interface Props {
     results: QueryResults;

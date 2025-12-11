@@ -7,22 +7,12 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-
-interface StationInfo {
-    name?: string;
-    provincia?: string | null;
-}
+import type { StationInfo, ChartDataPoint } from '@/types/station';
 
 interface Props {
     title: string;
     station: StationInfo;
-    data: Array<{
-        time: Date;
-        temperature: number | null;
-        precipitation: number | null;
-        humidity: number | null;
-        wind: number | null;
-    }>;
+    data: ChartDataPoint[];
 }
 
 defineProps<Props>();

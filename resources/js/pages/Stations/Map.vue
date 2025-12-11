@@ -2,15 +2,8 @@
 import StationsMap from '@/components/StationsMap.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItemType } from '@/types';
+import type { Station } from '@/types/station';
 import { ref } from 'vue';
-
-interface Station {
-    id: string | null;
-    name: string;
-    lat: string | number;
-    lon: string | number;
-    provincia?: string | null;
-}
 
 interface Props {
     stations: Station[];

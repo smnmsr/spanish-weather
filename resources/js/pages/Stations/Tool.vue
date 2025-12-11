@@ -13,18 +13,10 @@ import ResultsSection from '@/pages/Stations/Tool/ResultsSection.vue';
 import WelcomeStep from '@/pages/Stations/Tool/WelcomeStep.vue';
 import type { BreadcrumbItemType } from '@/types';
 import type { DataQueryType } from '@/types/data-query';
+import type { Station } from '@/types/station';
 import { router } from '@inertiajs/vue3';
 import { ChartBar, Database, Home, Map } from 'lucide-vue-next';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-
-interface Station {
-    id: string | null;
-    name: string;
-    lat: string | number;
-    lon: string | number;
-    provincia?: string | null;
-    altitude?: number | null;
-}
 
 interface Props {
     stations: Station[];
