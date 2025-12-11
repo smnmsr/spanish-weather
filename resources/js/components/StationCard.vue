@@ -7,7 +7,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import type { StationInfo, ChartDataPoint } from '@/types/station';
+import type { ChartDataPoint, StationInfo } from '@/types/station';
 
 interface Props {
     title: string;

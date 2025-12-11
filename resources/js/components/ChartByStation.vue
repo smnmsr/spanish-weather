@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ChartLegend from '@/components/ChartLegend.vue';
+import type { ChartDataPoint } from '@/types/station';
 import {
     VisArea,
     VisAxis,
@@ -6,8 +8,6 @@ import {
     VisStackedBar,
     VisXYContainer,
 } from '@unovis/vue';
-import type { ChartDataPoint } from '@/types/station';
-import ChartLegend from '@/components/ChartLegend.vue';
 
 interface Props {
     data: ChartDataPoint[];
@@ -29,7 +29,12 @@ const legendItems = [
         shape: 'circle' as const,
         opacity: 0.5,
     },
-    { label: 'Wind (km/h)', color: '#d946ef', shape: 'circle' as const, opacity: 0.7 },
+    {
+        label: 'Wind (km/h)',
+        color: '#d946ef',
+        shape: 'circle' as const,
+        opacity: 0.7,
+    },
 ];
 </script>
 
