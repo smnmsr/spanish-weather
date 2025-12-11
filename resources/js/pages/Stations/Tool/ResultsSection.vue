@@ -4,7 +4,7 @@ import StationNoDataCard from '@/components/StationNoDataCard.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import type { QueryResults } from '@/types/station';
-import { AlertCircle, Download } from 'lucide-vue-next';
+import { AlertCircle } from 'lucide-vue-next';
 
 interface Props {
     results: QueryResults;
@@ -17,7 +17,7 @@ interface Props {
 const props = defineProps<Props>();
 
 const emit = defineEmits<{
-    (e: 'clear-results'): void;
+    (e: 'go-back'): void;
 }>();
 </script>
 
@@ -40,15 +40,9 @@ const emit = defineEmits<{
                         }}
                     </p>
                 </div>
-                <div class="flex gap-3">
-                    <Button variant="outline" @click="emit('clear-results')"
-                        >Ergebnisse ausblenden</Button
-                    >
-                    <Button
-                        ><Download class="mr-2 h-4 w-4" />Daten
-                        exportieren</Button
-                    >
-                </div>
+                <Button variant="outline" @click="emit('go-back')"
+                    >Zurück zur Auswahl</Button
+                >
             </div>
 
             <div

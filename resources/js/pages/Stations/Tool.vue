@@ -540,7 +540,9 @@ onUnmounted(() => {
                                     :stations-without-data="stationsWithoutData"
                                     :chart-data-by-station="chartDataByStation"
                                     :query-type-title="queryTypeTitle"
-                                    @clear-results="() => (queryResults = null)"
+                                    @go-back="
+                                        () => updateUrlStep('data-options')
+                                    "
                                 />
                             </div>
                         </template>
