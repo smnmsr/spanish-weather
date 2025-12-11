@@ -169,7 +169,7 @@
     body {
         @apply bg-background text-foreground;
     }
-    
+
     /* Control Leaflet map z-index to keep it below dialogs/sheets */
     .leaflet-pane,
     .leaflet-tile-pane,
@@ -184,7 +184,7 @@
     .leaflet-bottom {
         z-index: auto !important;
     }
-    
+
     .leaflet-container {
         z-index: 0 !important;
     }
