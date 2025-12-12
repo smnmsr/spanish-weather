@@ -120,6 +120,13 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 - You must only create documentation files if explicitly requested by the user.
 
+## Type Strategy (Frontend)
+
+- Define and reuse TypeScript types centrally under resources/js/types/.
+- Export shared unions like DimensionKey and interfaces like ChartDataPoint from resources/js/types/index.ts.
+- Prefer importing from '@/types' rather than declaring ad-hoc types in components.
+- Keep UI libraries' option types aligned with their official typings; avoid unsupported options.
+
 === boost rules ===
 
 ## Laravel Boost
@@ -432,7 +439,7 @@ If your application uses the `<Form>` component from Inertia, you can use Wayfin
   it('returns all', function () {
   $response = $this->postJson('/api/docs', []);
 
-          $response->assertSuccessful();
+            $response->assertSuccessful();
 
     });
     </code-snippet>
@@ -570,13 +577,13 @@ $pages->assertNoJavascriptErrors()->assertNoConsoleLogs();
 
 - When listing items, use gap utilities for spacing, don't use margins.
 
-        <code-snippet name="Valid Flex Gap Spacing Example" lang="html">
-            <div class="flex gap-8">
-                <div>Superior</div>
-                <div>Michigan</div>
-                <div>Erie</div>
-            </div>
-        </code-snippet>
+          <code-snippet name="Valid Flex Gap Spacing Example" lang="html">
+              <div class="flex gap-8">
+                  <div>Superior</div>
+                  <div>Michigan</div>
+                  <div>Erie</div>
+              </div>
+          </code-snippet>
 
 ### Dark Mode
 

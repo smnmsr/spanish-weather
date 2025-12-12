@@ -60,7 +60,7 @@ const filteredLegendItems = computed(() => {
 });
 
 // Tooltip to show data on hover
-const tooltip = new Tooltip<ChartDataPoint>((d) => {
+const tooltip = new Tooltip((d: ChartDataPoint) => {
     const parts = [];
     if (props.showTemperature && d.temperature != null) {
         parts.push(`Temp: ${d.temperature.toFixed(1)}°C`);
@@ -89,8 +89,8 @@ const tooltip = new Tooltip<ChartDataPoint>((d) => {
             <!-- Temperature Line -->
             <VisLine
                 v-if="showTemperature"
-                :x="(d: any) => d.time"
-                :y="(d: any) => d.temperature"
+                :x="(d: ChartDataPoint) => d.time"
+                :y="(d: ChartDataPoint) => d.temperature"
                 color="#ef4444"
                 :line-width="2"
             />
@@ -98,8 +98,8 @@ const tooltip = new Tooltip<ChartDataPoint>((d) => {
             <!-- Precipitation Stacked Bar -->
             <VisStackedBar
                 v-if="showPrecipitation"
-                :x="(d: any) => d.time"
-                :y="(d: any) => d.precipitation"
+                :x="(d: ChartDataPoint) => d.time"
+                :y="(d: ChartDataPoint) => d.precipitation"
                 color="#3b82f6"
                 :opacity="0.6"
             />
@@ -107,8 +107,8 @@ const tooltip = new Tooltip<ChartDataPoint>((d) => {
             <!-- Humidity Line -->
             <VisLine
                 v-if="showHumidity"
-                :x="(d: any) => d.time"
-                :y="(d: any) => d.humidity"
+                :x="(d: ChartDataPoint) => d.time"
+                :y="(d: ChartDataPoint) => d.humidity"
                 color="#eab308"
                 :line-width="2"
                 :opacity="0.7"
@@ -117,8 +117,8 @@ const tooltip = new Tooltip<ChartDataPoint>((d) => {
             <!-- Wind Line -->
             <VisLine
                 v-if="showWind"
-                :x="(d: any) => d.time"
-                :y="(d: any) => d.wind"
+                :x="(d: ChartDataPoint) => d.time"
+                :y="(d: ChartDataPoint) => d.wind"
                 color="#d946ef"
                 :line-width="2"
                 :opacity="0.7"
@@ -127,7 +127,7 @@ const tooltip = new Tooltip<ChartDataPoint>((d) => {
             <!-- X Axis -->
             <VisAxis
                 type="x"
-                :x="(d: any) => d.time"
+                :x="(d: ChartDataPoint) => d.time"
                 :tick-format="
                     (d: number) => {
                         const date = new Date(d);

@@ -17,6 +17,7 @@ import {
     CarouselNext,
     CarouselPrevious,
 } from '@/components/ui/carousel';
+import type { ChartDataPoint, DimensionKey } from '@/types';
 import type { QueryResults } from '@/types/station';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
@@ -82,7 +83,11 @@ const hasPartialData = computed(() => {
     return Object.keys(partialDataInfo.value).length > 0;
 });
 
-const chartSlides = [
+const chartSlides: Array<{
+    key: DimensionKey;
+    title: string;
+    description: string;
+}> = [
     {
         key: 'temperature',
         title: 'Temperatur',
@@ -208,10 +213,11 @@ const teardownCarouselListeners = () => {
     const api = carouselApi.value;
     if (!api) return;
 
-    api.off('pointerDown', markCarouselInteraction);
-    api.off('scroll', markCarouselInteraction);
-    api.off('select', markCarouselInteraction);
+    (api as any).off?.('pointerDown', markCarouselInteraction);
+    (api as any).off?.('scroll', markCarouselInteraction);
+    (api as any).off?.('select', markCarouselInteraction);
 };
+const formatMissing = (arr: string[]): string => arr.join(', ');
 
 const handleCarouselInit = (api: CarouselApi) => {
     carouselApi.value = api;
@@ -328,7 +334,8 @@ const handleCarouselInit = (api: CarouselApi) => {
                                                 ?.name || stationId
                                         }}
                                     </span>
-                                    - fehlend: {{ dimensions.join(', ') }}
+                                    - fehlend:
+                                    {{ formatMissing(dimensions as string[]) }}
                                 </li>
                             </ul>
                         </div>
@@ -362,7 +369,7 @@ const handleCarouselInit = (api: CarouselApi) => {
                     <Carousel
                         class="w-full"
                         :style="carouselHeightStyle"
-                        :opts="{ align: 'start', loop: true, draggable: true }"
+                        :opts="{ align: 'start', loop: true }"
                         @init-api="handleCarouselInit"
                     >
                         <div class="relative h-full" :class="chartPaddingClass">
