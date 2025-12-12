@@ -309,6 +309,94 @@ class AemetFixtures
     }
 
     /**
+     * Get mock daily climate data.
+     * Represents the response from /api/valores/climatologicos/diarios/datos endpoint
+     */
+    public static function dailyClimateData(): array
+    {
+        return [
+            [
+                'idema' => '3195',
+                'fecha' => '2024-12-10',
+                'tmed' => '14,5',
+                'tmax' => '18,2',
+                'tmin' => '10,8',
+                'hrMedia' => '65',
+                'hrMax' => '82',
+                'hrMin' => '48',
+                'prec' => '0,0',
+                'velmedia' => '8,5',
+                'sol' => '6,2',
+            ],
+            [
+                'idema' => '3195',
+                'fecha' => '2024-12-11',
+                'tmed' => '15,2',
+                'tmax' => '19,1',
+                'tmin' => '11,5',
+                'hrMedia' => '62',
+                'hrMax' => '78',
+                'hrMin' => '45',
+                'prec' => '0,0',
+                'velmedia' => '9,2',
+                'sol' => '6,8',
+            ],
+            [
+                'idema' => '3195',
+                'fecha' => '2024-12-12',
+                'tmed' => '16,1',
+                'tmax' => '20,3',
+                'tmin' => '12,2',
+                'hrMedia' => '58',
+                'hrMax' => '75',
+                'hrMin' => '42',
+                'prec' => '0,0',
+                'velmedia' => '7,8',
+                'sol' => '7,5',
+            ],
+            [
+                'idema' => '0201D',
+                'fecha' => '2024-12-10',
+                'tmed' => '12,8',
+                'tmax' => '15,4',
+                'tmin' => '10,2',
+                'hrMedia' => '72',
+                'hrMax' => '85',
+                'hrMin' => '58',
+                'prec' => '2,3',
+                'velmedia' => '12,5',
+                'sol' => '4,1',
+            ],
+            [
+                'idema' => '0201D',
+                'fecha' => '2024-12-11',
+                'tmed' => '13,5',
+                'tmax' => '16,2',
+                'tmin' => '11,1',
+                'hrMedia' => '68',
+                'hrMax' => '82',
+                'hrMin' => '54',
+                'prec' => '0,5',
+                'velmedia' => '11,8',
+                'sol' => '5,2',
+            ],
+            [
+                'idema' => '0201D',
+                'fecha' => '2024-12-12',
+                'tmed' => '14,2',
+                'tmax' => '17,1',
+                'tmin' => '11,8',
+                'hrMedia' => '65',
+                'hrMax' => '80',
+                'hrMin' => '51',
+                'prec' => '0,0',
+                'velmedia' => '10,5',
+                'sol' => '6,5',
+            ],
+        ];
+    }
+
+    /**
      * Get HTTP fake configuration for AEMET API.
      * This includes both the metadata and data URL responses following AEMET's two-step pattern.
      */

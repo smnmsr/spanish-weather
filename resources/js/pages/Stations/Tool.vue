@@ -12,7 +12,7 @@ import MapStep from '@/pages/Stations/Tool/MapStep.vue';
 import ResultsSection from '@/pages/Stations/Tool/ResultsSection.vue';
 import WelcomeStep from '@/pages/Stations/Tool/WelcomeStep.vue';
 import type { BreadcrumbItemType } from '@/types';
-import type { DataQueryType } from '@/types/data-query';
+import type { DataQueryType, DateRangeSelection } from '@/types/data-query';
 import type { Station } from '@/types/station';
 import { router } from '@inertiajs/vue3';
 import { ChartBar, Database, Home, Map } from 'lucide-vue-next';
@@ -36,6 +36,7 @@ const mapSectionRef = ref<HTMLElement | null>(null);
 const dataOptionsRef = ref<HTMLElement | null>(null);
 const selectedIds = ref<Set<string>>(new Set(props.selectedStations));
 const selectedDataQuery = ref<DataQueryType | null>(null);
+const selectedDateRange = ref<DateRangeSelection | null>(null);
 const queryResults = ref<any>(null);
 const isLoadingResults = ref(false);
 const resultsSectionRef = ref<HTMLElement | null>(null);
@@ -46,7 +47,9 @@ const selectedCount = computed(() => selectedIds.value.size);
 const groupedObservations = computed(() => {
     if (!queryResults.value?.observations) return {};
 
+    const isDaily = queryResults.value.queryType === 'daily-values';
     const grouped: Record<string, any[]> = {};
+
     queryResults.value.observations.forEach((obs: any) => {
         const stationId = obs.idema;
         if (!grouped[stationId]) {
@@ -55,11 +58,10 @@ const groupedObservations = computed(() => {
         grouped[stationId].push(obs);
     });
 
-    // Sort each station's observations by time (newest first)
     Object.keys(grouped).forEach((stationId) => {
         grouped[stationId].sort((a, b) => {
-            const timeA = a.fint || '';
-            const timeB = b.fint || '';
+            const timeA = isDaily ? a.fecha || '' : a.fint || '';
+            const timeB = isDaily ? b.fecha || '' : b.fint || '';
             return timeB.localeCompare(timeA);
         });
     });
@@ -105,24 +107,74 @@ const stationsWithoutData = computed(() => {
 const chartDataByStation = computed(() => {
     const result: Record<string, any[]> = {};
 
+    const isDaily = queryResults.value?.queryType === 'daily-values';
+
     Object.keys(groupedObservations.value).forEach((stationId) => {
         const observations = groupedObservations.value[stationId];
 
-        // Sort by time (oldest first for chart)
         const sorted = [...observations].sort((a, b) => {
-            const timeA = a.fint || '';
-            const timeB = b.fint || '';
+            const timeA = isDaily ? a.fecha || '' : a.fint || '';
+            const timeB = isDaily ? b.fecha || '' : b.fint || '';
             return timeA.localeCompare(timeB);
         });
 
-        // Convert to chart format
-        result[stationId] = sorted.map((obs: any) => ({
-            time: obs.fint ? new Date(obs.fint) : new Date(),
-            temperature: obs.ta !== undefined ? Number(obs.ta) : null,
-            precipitation: obs.prec !== undefined ? Number(obs.prec) : null,
-            humidity: obs.hr !== undefined ? Number(obs.hr) : null,
-            wind: obs.vv !== undefined ? Number(obs.vv) : null,
-        }));
+        result[stationId] = sorted.map((obs: any, index: number) => {
+            const timeValue = isDaily ? obs.fecha : obs.fint;
+            const date = timeValue ? new Date(timeValue) : new Date();
+
+            // Debug: Log first observation to see available fields
+            if (isDaily && index === 0) {
+                console.log(
+                    'Daily observation fields for station',
+                    stationId,
+                    ':',
+                    Object.keys(obs),
+                );
+            }
+
+            // Helper to parse comma-separated decimal strings (e.g., "19,5" -> 19.5)
+            const parseValue = (val: any): number | null => {
+                if (val === undefined || val === null || val === '')
+                    return null;
+                const str = String(val).replace(',', '.');
+                const num = Number(str);
+                return isNaN(num) ? null : num;
+            };
+
+            if (isDaily) {
+                // Daily climate data has: tmed, tmax, tmin, hrMedia, hrMax, hrMin, prec, velmedia, sol
+                // Try multiple field names for sunshine duration (API inconsistency)
+                const sunshineValue =
+                    obs.sol ?? obs.insolacion ?? obs.radiacion ?? null;
+
+                return {
+                    time: date,
+                    temperature: parseValue(obs.tmed),
+                    temperatureMax: parseValue(obs.tmax),
+                    temperatureMin: parseValue(obs.tmin),
+                    humidity: parseValue(obs.hrMedia),
+                    humidityMax: parseValue(obs.hrMax),
+                    humidityMin: parseValue(obs.hrMin),
+                    precipitation: parseValue(obs.prec),
+                    wind: parseValue(obs.velmedia),
+                    sunshine: parseValue(sunshineValue),
+                };
+            } else {
+                // Hourly observation data: ta, hr, prec, vv
+                return {
+                    time: date,
+                    temperature: parseValue(obs.ta),
+                    temperatureMax: null,
+                    temperatureMin: null,
+                    humidity: parseValue(obs.hr),
+                    humidityMax: null,
+                    humidityMin: null,
+                    precipitation: parseValue(obs.prec),
+                    wind: parseValue(obs.vv),
+                    sunshine: null,
+                };
+            }
+        });
     });
 
     return result;
@@ -155,6 +207,37 @@ const steps = [
         icon: ChartBar,
     },
 ];
+
+function formatDateInput(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function computePresetRange(
+    preset: 'last7' | 'last30' | 'thisMonth',
+): DateRangeSelection {
+    const today = new Date();
+    const end = formatDateInput(today);
+
+    if (preset === 'thisMonth') {
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        return {
+            startDate: formatDateInput(startOfMonth),
+            endDate: end,
+        };
+    }
+
+    const start = new Date(today);
+    const days = preset === 'last7' ? 6 : 29;
+    start.setDate(today.getDate() - days);
+
+    return {
+        startDate: formatDateInput(start),
+        endDate: end,
+    };
+}
 
 // Current step; set from URL on mount to avoid SSR "window" issues
 const currentStep = ref<'welcome' | 'map' | 'data-options' | 'results'>(
@@ -222,6 +305,26 @@ function updateUrlStep(step: 'welcome' | 'map' | 'data-options' | 'results') {
     } else {
         url.searchParams.delete('step');
     }
+
+    // Preserve analysis and date range parameters when navigating
+    if (selectedDataQuery.value) {
+        url.searchParams.set('analysis', String(selectedDataQuery.value));
+    } else {
+        url.searchParams.delete('analysis');
+    }
+
+    if (
+        selectedDataQuery.value === 'daily-values' &&
+        selectedDateRange.value?.startDate &&
+        selectedDateRange.value?.endDate
+    ) {
+        url.searchParams.set('start', selectedDateRange.value.startDate);
+        url.searchParams.set('end', selectedDateRange.value.endDate);
+    } else {
+        url.searchParams.delete('start');
+        url.searchParams.delete('end');
+    }
+
     window.history.replaceState({}, '', url.toString());
     currentStep.value = step;
 }
@@ -239,6 +342,18 @@ function updateUrlSelectionAndAnalysis() {
         url.searchParams.set('analysis', String(selectedDataQuery.value));
     } else {
         url.searchParams.delete('analysis');
+    }
+
+    if (
+        selectedDataQuery.value === 'daily-values' &&
+        selectedDateRange.value?.startDate &&
+        selectedDateRange.value?.endDate
+    ) {
+        url.searchParams.set('start', selectedDateRange.value.startDate);
+        url.searchParams.set('end', selectedDateRange.value.endDate);
+    } else {
+        url.searchParams.delete('start');
+        url.searchParams.delete('end');
     }
 
     window.history.replaceState({}, '', url.toString());
@@ -284,6 +399,11 @@ function handleMapReady() {
     isMapInitialized.value = true;
 }
 
+function updateDateRange(range: DateRangeSelection) {
+    selectedDateRange.value = range;
+    updateUrlSelectionAndAnalysis();
+}
+
 function goToStep(stepIndex: number) {
     const stepName = stepsOrder[stepIndex - 1];
     if (!stepName) return;
@@ -305,7 +425,26 @@ function goToStep(stepIndex: number) {
 function selectDataQuery(queryType: DataQueryType) {
     selectedDataQuery.value = queryType;
     // reflect analysis in URL
+    if (queryType === 'daily-values' && !selectedDateRange.value) {
+        selectedDateRange.value = computePresetRange('last7');
+    }
+
+    if (queryType !== 'daily-values') {
+        selectedDateRange.value = null;
+    }
+
     updateUrlSelectionAndAnalysis();
+}
+
+function applyDatePreset(presetKey: string) {
+    if (
+        presetKey === 'last7' ||
+        presetKey === 'last30' ||
+        presetKey === 'thisMonth'
+    ) {
+        selectedDateRange.value = computePresetRange(presetKey);
+        updateUrlSelectionAndAnalysis();
+    }
 }
 
 function saveSelection() {
@@ -330,6 +469,14 @@ async function proceedWithDataQuery() {
         return;
     }
 
+    if (
+        selectedDataQuery.value === 'daily-values' &&
+        (!selectedDateRange.value?.startDate ||
+            !selectedDateRange.value?.endDate)
+    ) {
+        return;
+    }
+
     isLoadingResults.value = true;
     queryResults.value = null;
 
@@ -348,10 +495,23 @@ async function proceedWithDataQuery() {
             body: JSON.stringify({
                 type: selectedDataQuery.value,
                 stationIds: Array.from(selectedIds.value),
+                dateRange: selectedDateRange.value ?? undefined,
             }),
         });
 
         if (!response.ok) {
+            // Handle API outage (503) or server errors (500)
+            if (response.status === 503 || response.status === 500) {
+                const errorData = await response.json().catch(() => ({}));
+                window.dispatchEvent(
+                    new CustomEvent('aemet:outage', {
+                        detail: {
+                            status: response.status,
+                            type: errorData.type || 'server_error',
+                        },
+                    }),
+                );
+            }
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
@@ -368,20 +528,6 @@ async function proceedWithDataQuery() {
         }, 300);
     } catch (error: any) {
         console.error('Error fetching data:', error);
-        // Notify UI about outage if 500 or network
-        const status =
-            error?.status ??
-            (error instanceof Response ? error.status : undefined);
-        if (status === 500) {
-            window.dispatchEvent(
-                new CustomEvent('aemet:outage', {
-                    detail: {
-                        status,
-                        type: 'server_error',
-                    },
-                }),
-            );
-        }
         // Gracefully clear current results
         queryResults.value = null;
     } finally {
@@ -393,6 +539,7 @@ function resetSelection() {
     selectedIds.value.clear();
     queryResults.value = null;
     selectedDataQuery.value = null;
+    selectedDateRange.value = null;
     saveSelection();
     updateUrlSelectionAndAnalysis();
 }
@@ -440,6 +587,22 @@ onMounted(() => {
     const analysisParam = params.get('analysis') as DataQueryType | null;
     if (analysisParam) {
         selectedDataQuery.value = analysisParam as DataQueryType;
+    }
+
+    const startParam = params.get('start');
+    const endParam = params.get('end');
+    if (startParam && endParam) {
+        selectedDateRange.value = {
+            startDate: startParam,
+            endDate: endParam,
+        };
+    }
+
+    if (
+        selectedDataQuery.value === 'daily-values' &&
+        !selectedDateRange.value
+    ) {
+        selectedDateRange.value = computePresetRange('last7');
     }
 
     // Auto-trigger query if step=results and we have stations + analysis
@@ -521,11 +684,14 @@ onUnmounted(() => {
                                     :selected-count="selectedCount"
                                     :selected-data-query="selectedDataQuery"
                                     :is-loading-results="isLoadingResults"
+                                    :date-range="selectedDateRange"
                                     @go-to-map="goToStep(2)"
                                     @select-data-query="selectDataQuery"
                                     @proceed-with-data-query="
                                         proceedWithDataQuery
                                     "
+                                    @update-date-range="updateDateRange"
+                                    @apply-date-preset="applyDatePreset"
                                 />
                             </div>
                         </template>
@@ -537,9 +703,7 @@ onUnmounted(() => {
                                     :stations-without-data="stationsWithoutData"
                                     :chart-data-by-station="chartDataByStation"
                                     :query-type-title="queryTypeTitle"
-                                    @go-back="
-                                        () => updateUrlStep('data-options')
-                                    "
+                                    @go-back="goToStep(3)"
                                 />
                             </div>
                         </template>

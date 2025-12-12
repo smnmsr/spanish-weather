@@ -46,9 +46,35 @@ const filteredChartData = computed(() => {
     return filtered;
 });
 
+const isDailyQuery = computed(
+    () => props.results?.queryType === 'daily-values',
+);
+
+const tickFormatter = computed(() => (value: number) => {
+    const date = new Date(value);
+    if (isDailyQuery.value) {
+        return date.toLocaleDateString('de-DE', {
+            day: '2-digit',
+            month: '2-digit',
+        });
+    }
+
+    return date.toLocaleDateString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+    });
+});
+
 // Detect stations with partial data
 const partialDataInfo = computed(() => {
-    const dimensions = ['temperature', 'precipitation', 'humidity', 'wind'];
+    const dimensions = [
+        'temperature',
+        'precipitation',
+        'humidity',
+        'wind',
+        'sunshine',
+    ];
     const stationMissingDimensions: Record<string, string[]> = {};
 
     props.stationsWithData.forEach((stationId) => {
@@ -66,12 +92,13 @@ const partialDataInfo = computed(() => {
                     precipitation: 'Niederschlag',
                     humidity: 'Luftfeuchtigkeit',
                     wind: 'Wind',
+                    sunshine: 'Sonnenschein',
                 };
                 missingDimensions.push(labels[dimension]);
             }
         });
 
-        if (missingDimensions.length > 0 && missingDimensions.length < 4) {
+        if (missingDimensions.length > 0 && missingDimensions.length < 5) {
             stationMissingDimensions[stationId] = missingDimensions;
         }
     });
@@ -91,7 +118,7 @@ const chartSlides: Array<{
     {
         key: 'temperature',
         title: 'Temperatur',
-        description: 'Temperatur (°C) für alle Stationen',
+        description: 'Temperatur (°C) – Mittelwert (Linie), Min/Max (Bereich)',
     },
     {
         key: 'precipitation',
@@ -101,12 +128,18 @@ const chartSlides: Array<{
     {
         key: 'humidity',
         title: 'Luftfeuchtigkeit',
-        description: 'Luftfeuchtigkeit (%) für alle Stationen',
+        description:
+            'Luftfeuchtigkeit (%) – Mittelwert (Linie), Min/Max (Bereich)',
     },
     {
         key: 'wind',
         title: 'Wind',
-        description: 'Wind (km/h) für alle Stationen',
+        description: 'Windgeschwindigkeit (km/h) – Mittelwert',
+    },
+    {
+        key: 'sunshine',
+        title: 'Sonnenschein',
+        description: 'Sonnenscheindauer (h) für alle Stationen',
     },
 ];
 
@@ -403,6 +436,7 @@ const handleCarouselInit = (api: CarouselApi) => {
                                                 :stations="
                                                     props.results.stations
                                                 "
+                                                :tick-formatter="tickFormatter"
                                             />
                                         </CardContent>
                                     </Card>

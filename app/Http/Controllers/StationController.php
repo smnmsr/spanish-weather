@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\AemetService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -59,14 +60,15 @@ class StationController
     {
         $validated = $request->validate([
             'type' => 'required|string|in:current-observations,daily-values,monthly-yearly-trends,extreme-values,climatological-normals',
-            'stationIds' => 'required|array',
+            'stationIds' => 'required|array|max:5',
             'stationIds.*' => 'required|string',
+            'dateRange.startDate' => 'required_if:type,daily-values|date',
+            'dateRange.endDate' => 'required_if:type,daily-values|date|after_or_equal:dateRange.startDate',
         ]);
 
         $type = $validated['type'];
         $stationIds = $validated['stationIds'];
 
-        // For now, only handle current-observations
         if ($type === 'current-observations') {
             $observations = $this->aemet->getRecentObservations();
 
@@ -97,6 +99,64 @@ class StationController
                 'observations' => array_values($filteredObservations),
                 'stations' => $stationDetails,
                 'selectedStationIds' => $stationIds,
+            ]);
+        }
+
+        if ($type === 'daily-values') {
+            $startDate = data_get($validated, 'dateRange.startDate');
+            $endDate = data_get($validated, 'dateRange.endDate');
+
+            $allStations = $this->aemet->getAllStations();
+            $stationDetails = [];
+
+            foreach ($allStations as $station) {
+                $stationId = $station['idema'] ?? $station['indicativo'] ?? null;
+
+                if ($stationId && in_array($stationId, $stationIds)) {
+                    $stationDetails[$stationId] = [
+                        'id' => $stationId,
+                        'name' => $station['nombre'] ?? $station['ub'] ?? 'Unknown',
+                        'provincia' => $station['provincia'] ?? null,
+                    ];
+                }
+            }
+
+            $dailyData = [];
+
+            try {
+                foreach ($stationIds as $stationId) {
+                    $data = $this->aemet->getDailyClimateData($stationId, (string) $startDate, (string) $endDate);
+
+                    $normalized = array_map(function (array $entry) use ($stationId) {
+                        return array_merge($entry, [
+                            'idema' => $entry['idema'] ?? $entry['indicativo'] ?? $stationId,
+                        ]);
+                    }, $data);
+
+                    $dailyData = array_merge($dailyData, $normalized);
+                }
+            } catch (\RuntimeException $e) {
+                Log::error('Error fetching daily climate data', [
+                    'message' => $e->getMessage(),
+                    'stationIds' => $stationIds,
+                    'dateRange' => [$startDate, $endDate],
+                ]);
+
+                return response()->json([
+                    'error' => 'AEMET API is currently unavailable. Please try again in a few minutes.',
+                    'type' => 'api_outage',
+                ], 503);
+            }
+
+            return response()->json([
+                'queryType' => $type,
+                'observations' => $dailyData,
+                'stations' => $stationDetails,
+                'selectedStationIds' => $stationIds,
+                'dateRange' => [
+                    'startDate' => $startDate,
+                    'endDate' => $endDate,
+                ],
             ]);
         }
 

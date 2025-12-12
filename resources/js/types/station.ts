@@ -16,14 +16,22 @@ export interface StationInfo {
 export interface ChartDataPoint {
     time: Date;
     temperature: number | null;
+    temperatureMax?: number | null;
+    temperatureMin?: number | null;
     precipitation: number | null;
     humidity: number | null;
+    humidityMax?: number | null;
+    humidityMin?: number | null;
     wind: number | null;
+    sunshine?: number | null;
 }
+
+import type { DateRangeSelection } from '@/types/data-query';
 
 export interface QueryResults {
     queryType: string;
     selectedStationIds: string[];
     observations: any[];
     stations: Record<string, { name?: string; provincia?: string | null }>;
+    dateRange?: DateRangeSelection;
 }

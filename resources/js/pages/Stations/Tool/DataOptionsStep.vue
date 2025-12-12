@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DateRangeSelector from '@/components/DateRangeSelector.vue';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -16,9 +17,8 @@ import {
     CarouselPrevious,
 } from '@/components/ui/carousel';
 import { Drawer, DrawerClose, DrawerContent } from '@/components/ui/drawer';
-import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import type { DataQueryType } from '@/types/data-query';
+import type { DataQueryType, DateRangeSelection } from '@/types/data-query';
 import { DATA_QUERY_OPTIONS } from '@/types/data-query';
 import {
     AlertCircle,
@@ -28,7 +28,7 @@ import {
     CloudOff,
     TrendingUp,
 } from 'lucide-vue-next';
-import { computed, defineComponent, h, onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 const iconComponents: Record<string, any> = {
     clock: Clock,
@@ -42,6 +42,7 @@ interface Props {
     selectedCount: number;
     selectedDataQuery: DataQueryType | null;
     isLoadingResults: boolean;
+    dateRange: DateRangeSelection | null;
 }
 
 const props = defineProps<Props>();
@@ -50,91 +51,21 @@ const emit = defineEmits<{
     (e: 'select-data-query', type: DataQueryType): void;
     (e: 'go-to-map'): void;
     (e: 'proceed-with-data-query'): void;
+    (e: 'update-date-range', range: DateRangeSelection): void;
+    (e: 'apply-date-preset', preset: string): void;
 }>();
 
-// Error Drawer state
 const showOutageDrawer = ref(false);
-const showDateRangeDrawer = ref(false);
 const carouselApi = ref<CarouselApi | null>(null);
-const startDate = ref('');
-const endDate = ref('');
 const tweenFactor = ref(0);
 const tweenNodes = ref<HTMLElement[]>([]);
+const isInitializing = ref(true);
 
 const requiresDateRange = computed(
     () =>
         DATA_QUERY_OPTIONS.find((o) => o.type === props.selectedDataQuery)
             ?.requiresDateRange ?? false,
 );
-
-const DateRangeFields = defineComponent({
-    name: 'DateRangeFields',
-    props: {
-        start: {
-            type: String,
-            required: true,
-        },
-        end: {
-            type: String,
-            required: true,
-        },
-        onUpdateStart: {
-            type: Function,
-            required: true,
-        },
-        onUpdateEnd: {
-            type: Function,
-            required: true,
-        },
-    },
-    setup(props) {
-        return () =>
-            h('div', { class: 'grid grid-cols-1 gap-4 md:grid-cols-2' }, [
-                h('div', { class: 'space-y-2' }, [
-                    h(
-                        Label,
-                        {
-                            for: 'start-date',
-                        },
-                        { default: () => 'Startdatum' },
-                    ),
-                    h('input', {
-                        id: 'start-date',
-                        type: 'date',
-                        class: 'w-full rounded-md border border-border bg-input p-2',
-                        value: props.start,
-                        onInput: (event: Event) => {
-                            const target = event.target as HTMLInputElement;
-                            (props.onUpdateStart as (value: string) => void)(
-                                target.value,
-                            );
-                        },
-                    }),
-                ]),
-                h('div', { class: 'space-y-2' }, [
-                    h(
-                        Label,
-                        {
-                            for: 'end-date',
-                        },
-                        { default: () => 'Enddatum' },
-                    ),
-                    h('input', {
-                        id: 'end-date',
-                        type: 'date',
-                        class: 'w-full rounded-md border border-border bg-input p-2',
-                        value: props.end,
-                        onInput: (event: Event) => {
-                            const target = event.target as HTMLInputElement;
-                            (props.onUpdateEnd as (value: string) => void)(
-                                target.value,
-                            );
-                        },
-                    }),
-                ]),
-            ]);
-    },
-});
 
 // Intercept proceed emission to allow UI error handling based on fetch errors
 function handleProceed() {
@@ -153,7 +84,7 @@ function attachOutageListener() {
 attachOutageListener();
 
 function syncSelectionFromCarousel(api: CarouselApi | null) {
-    if (!api) {
+    if (!api || isInitializing.value) {
         return;
     }
 
@@ -168,18 +99,29 @@ function syncSelectionFromCarousel(api: CarouselApi | null) {
 
 function setCarouselApi(api: CarouselApi) {
     carouselApi.value = api;
-    syncSelectionFromCarousel(api);
+
+    // If a data query is already selected, scroll carousel to that option
+    if (props.selectedDataQuery) {
+        const selectedIndex = DATA_QUERY_OPTIONS.findIndex(
+            (opt) => opt.type === props.selectedDataQuery,
+        );
+        if (selectedIndex >= 0) {
+            api.scrollTo(selectedIndex, true); // true = instant, no animation
+        }
+    } else {
+        // Only sync from carousel if no selection exists yet (will respect isInitializing flag)
+        syncSelectionFromCarousel(api);
+    }
+
+    // Attach listeners
     api.on('select', () => syncSelectionFromCarousel(api));
     api.on('scroll', setTweenValues);
     api.on('reInit', setTweenValues);
-}
 
-function setStartDate(value: string) {
-    startDate.value = value;
-}
-
-function setEndDate(value: string) {
-    endDate.value = value;
+    // Mark initialization as complete after a short delay to allow carousel to settle
+    setTimeout(() => {
+        isInitializing.value = false;
+    }, 100);
 }
 
 function handleCardClick(optionType: DataQueryType, index: number) {
@@ -356,67 +298,13 @@ onMounted(() => {
                 </Carousel>
             </div>
 
-            <div
+            <DateRangeSelector
                 v-if="props.selectedDataQuery && requiresDateRange"
-                class="mt-8"
-            >
-                <Card class="hidden md:block">
-                    <CardHeader>
-                        <CardTitle>Zeitraum auswählen</CardTitle>
-                        <CardDescription
-                            >Wählen Sie den gewünschten Zeitraum für Ihre
-                            Datenabfrage.</CardDescription
-                        >
-                    </CardHeader>
-                    <CardContent>
-                        <DateRangeFields
-                            :start="startDate"
-                            :end="endDate"
-                            :on-update-start="setStartDate"
-                            :on-update-end="setEndDate"
-                        />
-                    </CardContent>
-                </Card>
-
-                <div class="md:hidden">
-                    <Button
-                        variant="outline"
-                        class="w-full"
-                        @click="showDateRangeDrawer = true"
-                    >
-                        Zeitraum auswählen
-                    </Button>
-                </div>
-            </div>
-
-            <Drawer v-model:open="showDateRangeDrawer" class="md:hidden">
-                <DrawerContent>
-                    <div class="mx-auto w-full max-w-md space-y-4 px-6 py-6">
-                        <div class="space-y-1 text-center">
-                            <h3 class="text-lg font-semibold">
-                                Zeitraum auswählen
-                            </h3>
-                            <p
-                                class="text-sm text-slate-600 dark:text-slate-400"
-                            >
-                                Wählen Sie den gewünschten Zeitraum für Ihre
-                                Datenabfrage.
-                            </p>
-                        </div>
-                        <DateRangeFields
-                            :start="startDate"
-                            :end="endDate"
-                            :on-update-start="setStartDate"
-                            :on-update-end="setEndDate"
-                        />
-                        <div class="flex justify-end">
-                            <DrawerClose as-child>
-                                <Button variant="secondary">Fertig</Button>
-                            </DrawerClose>
-                        </div>
-                    </div>
-                </DrawerContent>
-            </Drawer>
+                :date-range="props.dateRange"
+                :max-days="60"
+                @update-date-range="emit('update-date-range', $event)"
+                @apply-preset="emit('apply-date-preset', $event)"
+            />
 
             <div
                 class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
@@ -434,7 +322,9 @@ onMounted(() => {
                     :disabled="
                         !props.selectedDataQuery ||
                         props.isLoadingResults ||
-                        (requiresDateRange && (!startDate || !endDate))
+                        (requiresDateRange &&
+                            (!props.dateRange?.startDate ||
+                                !props.dateRange?.endDate))
                     "
                 >
                     <Spinner

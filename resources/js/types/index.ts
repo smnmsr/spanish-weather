@@ -3,7 +3,8 @@ export type DimensionKey =
     | 'temperature'
     | 'precipitation'
     | 'humidity'
-    | 'wind';
+    | 'wind'
+    | 'sunshine';
 
 export interface ChartDataPoint {
     time: number; // Unix timestamp (ms)
@@ -11,6 +12,7 @@ export interface ChartDataPoint {
     precipitation?: number | null;
     humidity?: number | null;
     wind?: number | null;
+    sunshine?: number | null;
 }
 
 export const DimensionLabels: Record<DimensionKey, string> = {
@@ -18,4 +20,5 @@ export const DimensionLabels: Record<DimensionKey, string> = {
     precipitation: 'Niederschlag',
     humidity: 'Luftfeuchtigkeit',
     wind: 'Wind',
+    sunshine: 'Sonnenschein',
 };

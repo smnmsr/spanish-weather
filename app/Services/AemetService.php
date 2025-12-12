@@ -178,6 +178,16 @@ class AemetService
 
         $metadata = $response->json();
 
+        // Handle 404 (no data available) gracefully
+        if ($response->status() === 404 || (isset($metadata['estado']) && $metadata['estado'] === 404)) {
+            Log::info('AEMET API returned 404 - no data available', [
+                'endpoint' => $endpoint,
+                'descripcion' => $metadata['descripcion'] ?? 'Not Found',
+            ]);
+
+            return [];
+        }
+
         if (! isset($metadata['datos'])) {
             Log::error('AEMET API response missing datos URL', [
                 'endpoint' => $endpoint,
