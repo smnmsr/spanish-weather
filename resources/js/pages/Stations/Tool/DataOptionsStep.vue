@@ -286,6 +286,7 @@ onMounted(() => {
                         <CarouselItem
                             v-for="(option, index) in DATA_QUERY_OPTIONS"
                             :key="option.type"
+                            :data-testid="`data-option-${option.type}`"
                             class="basis-full pl-4 lg:basis-1/3"
                         >
                             <div
@@ -299,6 +300,7 @@ onMounted(() => {
                                 class="h-full p-2"
                             >
                                 <Card
+                                    :data-testid="`data-option-card-${option.type}`"
                                     class="h-full cursor-pointer border border-border bg-background shadow-md"
                                     @click="handleCardClick(option.type, index)"
                                 >
