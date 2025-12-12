@@ -13,6 +13,10 @@ interface Props {
     title: string;
     station: StationInfo;
     data: ChartDataPoint[];
+    showTemperature?: boolean;
+    showPrecipitation?: boolean;
+    showHumidity?: boolean;
+    showWind?: boolean;
 }
 
 defineProps<Props>();
@@ -27,7 +31,13 @@ defineProps<Props>();
             }}</CardDescription>
         </CardHeader>
         <CardContent>
-            <ChartByStation :data="data" />
+            <ChartByStation
+                :data="data"
+                :show-temperature="showTemperature ?? true"
+                :show-precipitation="showPrecipitation ?? true"
+                :show-humidity="showHumidity ?? false"
+                :show-wind="showWind ?? false"
+            />
         </CardContent>
     </Card>
 </template>

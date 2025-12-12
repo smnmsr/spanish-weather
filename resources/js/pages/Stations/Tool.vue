@@ -530,10 +530,7 @@ onUnmounted(() => {
                             </div>
                         </template>
                         <template v-else-if="currentStep === 'results'">
-                            <div
-                                ref="resultsSectionRef"
-                                class="h-full overflow-auto"
-                            >
+                            <div ref="resultsSectionRef" class="h-full">
                                 <ResultsSection
                                     :results="queryResults"
                                     :stations-with-data="stationsWithData"

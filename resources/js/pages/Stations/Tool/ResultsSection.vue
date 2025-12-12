@@ -1,10 +1,24 @@
 <script setup lang="ts">
-import StationCard from '@/components/StationCard.vue';
-import StationNoDataCard from '@/components/StationNoDataCard.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import ChartByDimension from '@/components/ChartByDimension.vue';
+import InfoDrawer from '@/components/InfoDrawer.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    type CarouselApi,
+    Carousel,
+    CarouselContent,
+    CarouselItem,
+    CarouselNext,
+    CarouselPrevious,
+} from '@/components/ui/carousel';
 import type { QueryResults } from '@/types/station';
-import { AlertCircle } from 'lucide-vue-next';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 interface Props {
     results: QueryResults;
@@ -19,17 +33,215 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
     (e: 'go-back'): void;
 }>();
+
+// Filter data to only include stations with data
+const filteredChartData = computed(() => {
+    const filtered: Record<string, ChartDataPoint[]> = {};
+    props.stationsWithData.forEach((stationId) => {
+        if (props.chartDataByStation[stationId]) {
+            filtered[stationId] = props.chartDataByStation[stationId];
+        }
+    });
+    return filtered;
+});
+
+// Detect stations with partial data
+const partialDataInfo = computed(() => {
+    const dimensions = ['temperature', 'precipitation', 'humidity', 'wind'];
+    const stationMissingDimensions: Record<string, string[]> = {};
+
+    props.stationsWithData.forEach((stationId) => {
+        const data = props.chartDataByStation[stationId];
+        if (!data) return;
+
+        const missingDimensions: string[] = [];
+        dimensions.forEach((dimension) => {
+            const hasData = data.some(
+                (point: ChartDataPoint) => point[dimension] != null,
+            );
+            if (!hasData) {
+                const labels: Record<string, string> = {
+                    temperature: 'Temperatur',
+                    precipitation: 'Niederschlag',
+                    humidity: 'Luftfeuchtigkeit',
+                    wind: 'Wind',
+                };
+                missingDimensions.push(labels[dimension]);
+            }
+        });
+
+        if (missingDimensions.length > 0 && missingDimensions.length < 4) {
+            stationMissingDimensions[stationId] = missingDimensions;
+        }
+    });
+
+    return stationMissingDimensions;
+});
+
+const hasPartialData = computed(() => {
+    return Object.keys(partialDataInfo.value).length > 0;
+});
+
+const chartSlides = [
+    {
+        key: 'temperature',
+        title: 'Temperatur',
+        description: 'Temperatur (°C) für alle Stationen',
+    },
+    {
+        key: 'precipitation',
+        title: 'Niederschlag',
+        description: 'Niederschlag (mm) für alle Stationen',
+    },
+    {
+        key: 'humidity',
+        title: 'Luftfeuchtigkeit',
+        description: 'Luftfeuchtigkeit (%) für alle Stationen',
+    },
+    {
+        key: 'wind',
+        title: 'Wind',
+        description: 'Wind (km/h) für alle Stationen',
+    },
+];
+
+const infoDrawerOpen = ref(false);
+const hasInfo = computed(
+    () =>
+        props.stationsWithoutData.length > 0 ||
+        Object.keys(partialDataInfo.value).length > 0,
+);
+
+const viewportWidth = ref(
+    typeof window !== 'undefined' ? window.innerWidth : 0,
+);
+const viewportHeight = ref(
+    typeof window !== 'undefined' ? window.innerHeight : 0,
+);
+
+const updateViewport = () => {
+    if (typeof window === 'undefined') return;
+    viewportWidth.value = window.innerWidth;
+    viewportHeight.value = window.innerHeight;
+};
+
+onMounted(() => {
+    updateViewport();
+    if (typeof window === 'undefined') return;
+    window.addEventListener('resize', updateViewport);
+});
+
+onBeforeUnmount(() => {
+    teardownCarouselListeners();
+    clearIdleNudge();
+    if (typeof window === 'undefined') return;
+    window.removeEventListener('resize', updateViewport);
+});
+
+const showSideArrows = computed(() => viewportWidth.value > 640);
+const showBottomButtons = computed(
+    () => viewportHeight.value > 700 && !showSideArrows.value,
+);
+const chartPaddingClass = computed(() =>
+    showSideArrows.value ? 'px-12 sm:px-16' : 'px-0',
+);
+const carouselHeightStyle = computed(() => {
+    // Reserve room for header and bottom controls; clamp to keep stable across breakpoints.
+    const reserved = showBottomButtons.value ? 260 : 250;
+    const available =
+        viewportHeight.value > 0 ? viewportHeight.value - reserved : 0;
+    const heightPx = Math.max(260, Math.min(available, 1000));
+    return {
+        height: `${heightPx}px`,
+        maxHeight: 'calc(100vh - 180px)',
+    };
+});
+
+const carouselApi = ref<CarouselApi | null>(null);
+const idleNudgeTimeoutId = ref<number | null>(null);
+const hasUserInteractedWithCarousel = ref(false);
+const hasCarouselNudged = ref(false);
+
+const clearIdleNudge = () => {
+    if (idleNudgeTimeoutId.value !== null && typeof window !== 'undefined') {
+        window.clearTimeout(idleNudgeTimeoutId.value);
+    }
+    idleNudgeTimeoutId.value = null;
+};
+
+const markCarouselInteraction = () => {
+    hasUserInteractedWithCarousel.value = true;
+    clearIdleNudge();
+};
+
+const runCarouselNudge = () => {
+    const api = carouselApi.value;
+    if (
+        !api ||
+        hasUserInteractedWithCarousel.value ||
+        hasCarouselNudged.value ||
+        (!api.canScrollNext() && !api.canScrollPrev())
+    ) {
+        return;
+    }
+
+    hasCarouselNudged.value = true;
+    clearIdleNudge();
+    api.scrollNext();
+
+    if (typeof window === 'undefined') return;
+
+    window.setTimeout(() => {
+        api.scrollPrev();
+    }, 450);
+};
+
+const scheduleCarouselNudge = () => {
+    if (typeof window === 'undefined') return;
+    if (hasUserInteractedWithCarousel.value || hasCarouselNudged.value) return;
+
+    clearIdleNudge();
+    idleNudgeTimeoutId.value = window.setTimeout(runCarouselNudge, 5000);
+};
+
+const teardownCarouselListeners = () => {
+    const api = carouselApi.value;
+    if (!api) return;
+
+    api.off('pointerDown', markCarouselInteraction);
+    api.off('scroll', markCarouselInteraction);
+    api.off('select', markCarouselInteraction);
+};
+
+const handleCarouselInit = (api: CarouselApi) => {
+    carouselApi.value = api;
+
+    api.on('pointerDown', markCarouselInteraction);
+    api.on('scroll', markCarouselInteraction);
+    api.on('select', markCarouselInteraction);
+
+    scheduleCarouselNudge();
+};
 </script>
 
 <template>
-    <section class="min-h-screen p-8">
-        <div class="mx-auto max-w-7xl">
-            <div class="mb-8 flex items-center justify-between">
-                <div>
-                    <h2 class="mb-2 text-3xl font-bold">
+    <section class="flex h-full flex-col px-4 py-4 sm:px-8 sm:py-6">
+        <div
+            class="mx-auto flex w-full max-w-7xl flex-1 flex-col overflow-hidden"
+        >
+            <div
+                class="mb-4 flex flex-shrink-0 flex-wrap items-start justify-between gap-3 sm:mb-6"
+            >
+                <div class="min-w-0">
+                    <h2
+                        class="mb-1 overflow-hidden text-xl leading-tight font-bold text-ellipsis whitespace-nowrap sm:text-2xl lg:text-3xl"
+                        :title="queryTypeTitle"
+                    >
                         {{ queryTypeTitle }}
                     </h2>
-                    <p class="text-slate-600 dark:text-slate-400">
+                    <p
+                        class="text-xs text-slate-600 sm:text-sm dark:text-slate-400"
+                    >
                         Ergebnisse für
                         {{ props.results.selectedStationIds?.length || 0 }}
                         Station{{
@@ -40,9 +252,97 @@ const emit = defineEmits<{
                         }}
                     </p>
                 </div>
-                <Button variant="outline" @click="emit('go-back')"
-                    >Zurück zur Auswahl</Button
-                >
+                <div class="flex items-center gap-2">
+                    <InfoDrawer
+                        v-if="hasInfo"
+                        v-model:open="infoDrawerOpen"
+                        title="Datenhinweise"
+                        description="Details zu fehlenden oder teilweise vorhandenen Daten."
+                    >
+                        <div
+                            v-if="stationsWithoutData.length > 0"
+                            class="space-y-2"
+                        >
+                            <h3 class="text-base font-semibold">
+                                Fehlende Daten
+                            </h3>
+                            <p
+                                class="text-sm text-slate-600 dark:text-slate-400"
+                            >
+                                <strong>{{
+                                    stationsWithoutData.length
+                                }}</strong>
+                                von
+                                <strong>{{
+                                    props.results.selectedStationIds?.length ||
+                                    0
+                                }}</strong>
+                                Station{{
+                                    (props.results.selectedStationIds?.length ||
+                                        0) !== 1
+                                        ? 'en'
+                                        : ''
+                                }}
+                                {{
+                                    stationsWithoutData.length === 1
+                                        ? 'hat'
+                                        : 'haben'
+                                }}
+                                keine Daten für den ausgewählten Zeitraum:
+                            </p>
+                            <ul
+                                class="list-inside list-disc text-sm text-slate-700 dark:text-slate-300"
+                            >
+                                <li v-for="id in stationsWithoutData" :key="id">
+                                    {{ props.results.stations[id]?.name || id }}
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div v-if="hasPartialData" class="space-y-2">
+                            <h3 class="text-base font-semibold">
+                                Teilweise Daten
+                            </h3>
+                            <p
+                                class="text-sm text-slate-600 dark:text-slate-400"
+                            >
+                                {{
+                                    Object.keys(partialDataInfo.value)
+                                        .length === 1
+                                        ? '1 Station liefert nur teilweise Daten:'
+                                        : `${Object.keys(partialDataInfo.value).length} Stationen liefern nur teilweise Daten:`
+                                }}
+                            </p>
+                            <ul
+                                class="list-inside list-disc space-y-1 text-sm text-slate-700 dark:text-slate-300"
+                            >
+                                <li
+                                    v-for="(
+                                        dimensions, stationId
+                                    ) in partialDataInfo.value"
+                                    :key="stationId"
+                                >
+                                    <span class="font-medium">
+                                        {{
+                                            props.results.stations[stationId]
+                                                ?.name || stationId
+                                        }}
+                                    </span>
+                                    - fehlend: {{ dimensions.join(', ') }}
+                                </li>
+                            </ul>
+                        </div>
+                    </InfoDrawer>
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        class="h-9 px-3"
+                        @click="emit('go-back')"
+                    >
+                        Zurück
+                    </Button>
+                </div>
             </div>
 
             <div
@@ -50,58 +350,77 @@ const emit = defineEmits<{
                     !props.results.observations ||
                     props.results.observations.length === 0
                 "
-                class="rounded-lg border border-slate-200 bg-white p-12 text-center dark:border-slate-800 dark:bg-slate-900"
+                class="rounded-lg border border-slate-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900"
             >
                 <p class="text-lg text-slate-600 dark:text-slate-400">
                     Keine Daten verfügbar für die ausgewählten Stationen.
                 </p>
             </div>
 
-            <div class="space-y-8">
-                <Alert v-if="stationsWithoutData.length > 0">
-                    <AlertCircle class="h-4 w-4" />
-                    <AlertTitle>Fehlende Daten</AlertTitle>
-                    <AlertDescription>
-                        <strong>{{ stationsWithoutData.length }}</strong> von
-                        <strong>{{
-                            props.results.selectedStationIds?.length || 0
-                        }}</strong>
-                        Station{{
-                            (props.results.selectedStationIds?.length || 0) !==
-                            1
-                                ? 'en'
-                                : ''
-                        }}
-                        {{ stationsWithoutData.length === 1 ? 'hat' : 'haben' }}
-                        keine Daten für den ausgewählten Zeitraum:
-                        <span class="font-medium">
-                            {{
-                                stationsWithoutData
-                                    .map(
-                                        (id: string) =>
-                                            props.results.stations[id]?.name ||
-                                            id,
-                                    )
-                                    .join(', ')
-                            }}
-                        </span>
-                    </AlertDescription>
-                </Alert>
+            <div class="flex-1 overflow-visible">
+                <div v-if="stationsWithData.length > 0" class="h-full w-full">
+                    <Carousel
+                        class="w-full"
+                        :style="carouselHeightStyle"
+                        :opts="{ align: 'start', loop: true, draggable: true }"
+                        @init-api="handleCarouselInit"
+                    >
+                        <div class="relative h-full" :class="chartPaddingClass">
+                            <CarouselContent class="h-full gap-4 sm:gap-6">
+                                <CarouselItem
+                                    v-for="slide in chartSlides"
+                                    :key="slide.key"
+                                    class="h-full basis-full"
+                                >
+                                    <Card class="flex h-full w-full flex-col">
+                                        <CardHeader
+                                            class="flex-shrink-0 p-3 pb-2 sm:p-6 sm:pb-3"
+                                        >
+                                            <CardTitle
+                                                class="text-lg sm:text-xl"
+                                            >
+                                                {{ slide.title }}
+                                            </CardTitle>
+                                            <CardDescription
+                                                class="hidden text-sm text-slate-600 sm:block dark:text-slate-400"
+                                            >
+                                                {{ slide.description }}
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent
+                                            class="flex min-h-0 flex-1 flex-col p-3 pt-1 sm:p-6 sm:pt-3"
+                                        >
+                                            <ChartByDimension
+                                                :dimension="slide.key"
+                                                :data="filteredChartData"
+                                                :stations="
+                                                    props.results.stations
+                                                "
+                                            />
+                                        </CardContent>
+                                    </Card>
+                                </CarouselItem>
+                            </CarouselContent>
 
-                <StationCard
-                    v-for="stationId in stationsWithData"
-                    :key="stationId"
-                    :title="stationId"
-                    :station="props.results.stations[stationId] ?? {}"
-                    :data="props.chartDataByStation[stationId]"
-                />
+                            <CarouselPrevious
+                                v-if="showSideArrows"
+                                class="top-1/2 left-3 z-10 -translate-y-1/2 sm:left-5"
+                            />
+                            <CarouselNext
+                                v-if="showSideArrows"
+                                class="top-1/2 right-3 z-10 -translate-y-1/2 sm:right-5"
+                            />
+                        </div>
 
-                <StationNoDataCard
-                    v-for="stationId in stationsWithoutData"
-                    :key="'no-data-' + stationId"
-                    :title="stationId"
-                    :station="props.results.stations[stationId] ?? {}"
-                />
+                        <div
+                            v-if="showBottomButtons"
+                            class="mt-8 flex justify-center gap-3 pb-2"
+                        >
+                            <CarouselPrevious class="static h-10 w-10" />
+                            <CarouselNext class="static h-10 w-10" />
+                        </div>
+                    </Carousel>
+                </div>
             </div>
         </div>
     </section>

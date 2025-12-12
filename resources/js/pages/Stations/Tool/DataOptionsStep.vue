@@ -256,7 +256,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <section class="min-h-screen px-4 pt-6 pb-10 sm:px-8">
+    <section class="h-full px-4 pt-6 pb-10 sm:px-8">
         <div class="mx-auto max-w-5xl space-y-8">
             <div>
                 <h2 class="mb-2 text-3xl font-bold">
