@@ -1,3 +1,136 @@
+# Spanish Weather Explorer - AI Agent Instructions
+
+## Project Overview
+
+This is a **Spanish Weather Explorer** - a Laravel 12 + Vue 3 + Inertia.js v2 application for exploring historical and current weather data from Spanish meteorological stations using the AEMET (Agencia Estatal de Meteorología) OpenData API.
+
+**Key Purpose**: Help users analyze weather patterns across Spanish locations and time periods to make informed decisions about travel, holidays, and relocations.
+
+## Architecture & Data Flow
+
+### External API Integration (Critical)
+
+- **AemetService** (`app/Services/AemetService.php`) is the single source for all AEMET API interactions
+- Uses **two-step API pattern**: First request returns a data URL, second request fetches actual data
+- **Aggressive caching** via Laravel Cache (SQLite) - see `config/aemet.php` for TTL settings:
+    - Stations list: 24 hours (rarely changes)
+    - Recent observations: 1 hour (hourly updates)
+    - Historical data: 7 days (immutable)
+- **Retry logic with exponential backoff** for handling 429/500 errors from AEMET API
+- **No database models for weather data** - all data flows through API → Cache → Controller → Inertia props
+
+### Frontend Architecture
+
+- **Step-based wizard UI** (`resources/js/pages/Stations/Tool.vue`):
+    1. Welcome → 2. Map Selection → 3. Data Options → 4. Results
+- **Leaflet + MarkerCluster** for interactive map (`resources/js/components/StationsMap.vue`)
+    - Custom cluster styling with dark mode support
+    - Selection state managed via `Set<string>` of station IDs
+- **Unovis charts** (`@unovis/vue`) for weather data visualization
+- **Session storage** for selected stations (not persisted to DB)
+
+### Type System
+
+- **Centralized types** in `resources/js/types/`:
+    - `DimensionKey` union: 'temperature' | 'precipitation' | 'humidity' | 'wind'
+    - Import from `@/types` not inline declarations
+- **Wayfinder** auto-generates TypeScript route functions in `resources/js/wayfinder/`
+
+## Development Workflow
+
+### Running the Application
+
+```bash
+npm run dev  # Starts vite dev server with HMR
+```
+
+- Laravel Herd serves at `https://spanish-weather.test` (auto-configured, always running)
+- Use `npm run dev` for frontend development with hot module reloading
+- Queue processes background jobs (not heavily used yet)
+
+### Testing Strategy
+
+- **Pest v4** with Browser Testing plugin (Playwright-based)
+- Browser tests in `tests/Browser/` - **prefer these for UI workflows**
+    - Example: `StationsMapClusterTest.php` validates map rendering
+    - German UI text in assertions (e.g., `assertSee('OpenStreetMap')`)
+    - Use `->screenshot(true)` for visual debugging
+- Feature tests for API endpoints in `tests/Feature/`
+- **Run focused tests**: `php artisan test tests/Browser/StationsMapClusterTest.php`
+- **All changes require test coverage** - update or create tests before finalizing
+
+### Code Quality Scripts
+
+```bash
+vendor/bin/pint --dirty    # Format PHP
+npm run format             # Format JS/TS/Vue with Prettier
+npm run lint               # ESLint with auto-fix
+composer run precommit     # Runs all: pint + format + lint + build + test (always run before committing)
+```
+
+## Project-Specific Conventions
+
+### Language Requirements
+
+- **Development language**: English (code, tests, comments, commits)
+- **UI language**: German (user-facing text in components)
+- Example: Method `getStationObservations()` but UI shows "Wetterstationen"
+
+### Component Strategy
+
+- **shadcn-vue only** (`https://www.shadcn-vue.com/docs/components`)
+    - Add with `npx shadcn-vue@latest add [component-name]`
+    - Located in `resources/js/components/ui/`
+- Check `resources/js/components/` for existing custom components before creating new ones
+- **Leaflet utilities** centralized in `resources/js/lib/leaflet-utils.ts`:
+    - `configureDefaultMarkerIcons()`, `createMarkerIcon(selected)`, `createClusterIcon(count)`
+
+### Backend Patterns
+
+- **Constructor property promotion**: `public function __construct(public AemetService $aemet) {}`
+- **No `env()` outside config files** - use `config('aemet.api_key')`
+- **Session-based state** for station selections (see `StationController::saveSelection()`)
+- **API controllers** in `app/Http/Controllers/Api/` return JSON for AJAX calls
+- **Main controllers** use `Inertia::render()` for page components
+
+### Inertia v2 Features in Use
+
+- **Deferred props** for lazy-loading weather data (add skeleton states)
+- **Polling** for real-time updates (not yet implemented)
+- **Forms** using `<Form>` component with Wayfinder integration:
+    ```vue
+    <Form v-bind="store.form()"><input name="title" /></Form>
+    ```
+
+## Key Files & Directories
+
+- `idea.md` - Full product specification and UX design
+- `app/Services/AemetService.php` - AEMET API client (critical dependency)
+- `config/aemet.php` - API configuration and cache TTL settings
+- `routes/web.php` - Main routes + API routes under `/api` prefix
+- `resources/js/pages/Stations/Tool.vue` - Main wizard component
+- `resources/js/components/StationsMap.vue` - Leaflet map with clustering
+- `resources/js/types/` - Centralized TypeScript types
+- `tests/Browser/` - Pest browser tests for E2E validation
+
+## Common Gotchas
+
+1. **AEMET API requires two requests**: Don't expect data directly from first call
+2. **Coordinate parsing**: AEMET returns strings like "40°25'12\"N" - use `parseCoordinate()` from AemetService
+3. **Vite manifest errors**: Run `npm run build` or `composer run dev` if frontend changes don't appear
+4. **Dark mode**: Map tiles switch based on `prefers-color-scheme` media query
+5. **Station IDs**: Can be `idema` or `indicativo` - check both fields when mapping
+
+## Laravel Boost MCP Tools
+
+This project uses Laravel Boost MCP server - prioritize these tools:
+
+- `search-docs` for version-specific Laravel/Inertia/Pest docs (use before web search)
+- `tinker` for PHP debugging and Eloquent queries
+- `database-query` for read-only SQL
+- `browser-logs` for frontend debugging
+- `get-absolute-url` when sharing project URLs
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
@@ -439,7 +572,7 @@ If your application uses the `<Form>` component from Inertia, you can use Wayfin
   it('returns all', function () {
   $response = $this->postJson('/api/docs', []);
 
-              $response->assertSuccessful();
+                    $response->assertSuccessful();
 
     });
     </code-snippet>
@@ -577,13 +710,13 @@ $pages->assertNoJavascriptErrors()->assertNoConsoleLogs();
 
 - When listing items, use gap utilities for spacing, don't use margins.
 
-            <code-snippet name="Valid Flex Gap Spacing Example" lang="html">
-                <div class="flex gap-8">
-                    <div>Superior</div>
-                    <div>Michigan</div>
-                    <div>Erie</div>
-                </div>
-            </code-snippet>
+                  <code-snippet name="Valid Flex Gap Spacing Example" lang="html">
+                      <div class="flex gap-8">
+                          <div>Superior</div>
+                          <div>Michigan</div>
+                          <div>Erie</div>
+                      </div>
+                  </code-snippet>
 
 ### Dark Mode
 
