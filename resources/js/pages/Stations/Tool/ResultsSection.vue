@@ -346,10 +346,9 @@ const handleCarouselInit = (api: CarouselApi) => {
                                 class="text-sm text-slate-600 dark:text-slate-400"
                             >
                                 {{
-                                    Object.keys(partialDataInfo.value)
-                                        .length === 1
+                                    Object.keys(partialDataInfo).length === 1
                                         ? '1 Station liefert nur teilweise Daten:'
-                                        : `${Object.keys(partialDataInfo.value).length} Stationen liefern nur teilweise Daten:`
+                                        : `${Object.keys(partialDataInfo).length} Stationen liefern nur teilweise Daten:`
                                 }}
                             </p>
                             <ul
@@ -358,7 +357,7 @@ const handleCarouselInit = (api: CarouselApi) => {
                                 <li
                                     v-for="(
                                         dimensions, stationId
-                                    ) in partialDataInfo.value"
+                                    ) in partialDataInfo"
                                     :key="stationId"
                                 >
                                     <span class="font-medium">
@@ -368,7 +367,7 @@ const handleCarouselInit = (api: CarouselApi) => {
                                         }}
                                     </span>
                                     - fehlend:
-                                    {{ formatMissing(dimensions as string[]) }}
+                                    {{ formatMissing(dimensions) }}
                                 </li>
                             </ul>
                         </div>
