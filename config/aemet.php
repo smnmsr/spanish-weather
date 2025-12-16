@@ -36,9 +36,9 @@ return [
     */
 
     'cache_ttl' => [
-        'stations' => env('AEMET_CACHE_TTL', 86400), // 24 hours for station list
-        'recent_data' => env('AEMET_CACHE_TTL', 3600), // 1 hour for recent data
-        'historical_data' => env('AEMET_CACHE_TTL', 604800), // 7 days for historical data
+        'stations' => env('AEMET_CACHE_TTL_24H', 86400),
+        'recent_data' => env('AEMET_CACHE_TTL_1H', 3600),
+        'historical_data' => env('AEMET_CACHE_TTL_30D', 604800),
     ],
 
 ];

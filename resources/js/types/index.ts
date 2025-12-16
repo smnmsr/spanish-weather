@@ -1,4 +1,10 @@
 // Centralized frontend types for charts and stations
+
+export type BreadcrumbItemType = {
+    title: string;
+    href?: string;
+};
+
 export type DimensionKey =
     | 'temperature'
     | 'precipitation'

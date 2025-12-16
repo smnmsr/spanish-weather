@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ChartLegend from '@/components/ChartLegend.vue';
-import type { ChartDataPoint } from '@/types/station';
+import type { ChartDataPoint } from '@/types';
 import { Tooltip } from '@unovis/ts';
 import { VisAxis, VisLine, VisStackedBar, VisXYContainer } from '@unovis/vue';
 import { computed } from 'vue';
@@ -131,11 +131,24 @@ const tooltip = new Tooltip((d: ChartDataPoint) => {
                 :tick-format="
                     (d: number) => {
                         const date = new Date(d);
-                        return date.toLocaleDateString('de-DE', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            hour: '2-digit',
-                        });
+                        try {
+                            return date.toLocaleDateString('de-DE', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                hour: '2-digit',
+                            });
+                        } catch (e) {
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const month = String(date.getMonth() + 1).padStart(
+                                2,
+                                '0',
+                            );
+                            const hour = String(date.getHours()).padStart(
+                                2,
+                                '0',
+                            );
+                            return `${day}.${month} ${hour}`;
+                        }
                     }
                 "
                 :grid-line="false"

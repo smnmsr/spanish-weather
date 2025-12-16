@@ -50,20 +50,45 @@ const isDailyQuery = computed(
     () => props.results?.queryType === 'daily-values',
 );
 
+const isMonthlyYearlyQuery = computed(
+    () => props.results?.queryType === 'monthly-yearly-trends',
+);
+
 const tickFormatter = computed(() => (value: number) => {
     const date = new Date(value);
     if (isDailyQuery.value) {
+        try {
+            return date.toLocaleDateString('de-DE', {
+                day: '2-digit',
+                month: '2-digit',
+            });
+        } catch {
+            // Fallback for environments with limited Intl support
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            return `${day}.${month}`;
+        }
+    }
+
+    if (isMonthlyYearlyQuery.value) {
+        // For monthly-yearly trends, show only 2-digit year (95, 96, 97, etc.)
+        const year = date.getFullYear();
+        return String(year).slice(-2);
+    }
+
+    try {
         return date.toLocaleDateString('de-DE', {
             day: '2-digit',
             month: '2-digit',
+            hour: '2-digit',
         });
+    } catch {
+        // Fallback for environments with limited Intl support
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const hour = String(date.getHours()).padStart(2, '0');
+        return `${day}.${month} ${hour}`;
     }
-
-    return date.toLocaleDateString('de-DE', {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-    });
 });
 
 // Detect stations with partial data
@@ -110,38 +135,88 @@ const hasPartialData = computed(() => {
     return Object.keys(partialDataInfo.value).length > 0;
 });
 
-const chartSlides: Array<{
-    key: DimensionKey;
-    title: string;
-    description: string;
-}> = [
-    {
-        key: 'temperature',
-        title: 'Temperatur',
-        description: 'Temperatur (°C) – Mittelwert (Linie), Min/Max (Bereich)',
-    },
-    {
-        key: 'precipitation',
-        title: 'Niederschlag',
-        description: 'Niederschlag (mm) für alle Stationen',
-    },
-    {
-        key: 'humidity',
-        title: 'Luftfeuchtigkeit',
-        description:
-            'Luftfeuchtigkeit (%) – Mittelwert (Linie), Min/Max (Bereich)',
-    },
-    {
-        key: 'wind',
-        title: 'Wind',
-        description: 'Windgeschwindigkeit (km/h) – Mittelwert',
-    },
-    {
-        key: 'sunshine',
-        title: 'Sonnenschein',
-        description: 'Sonnenscheindauer (h) für alle Stationen',
-    },
+// German month names
+const monthNames = [
+    'Januar',
+    'Februar',
+    'März',
+    'April',
+    'Mai',
+    'Juni',
+    'Juli',
+    'August',
+    'September',
+    'Oktober',
+    'November',
+    'Dezember',
 ];
+
+const chartSlides = computed(() => {
+    const baseTitles: Record<
+        DimensionKey,
+        { title: string; description: string }
+    > = {
+        temperature: {
+            title: 'Temperatur',
+            description:
+                'Temperatur (°C) – Mittelwert (Linie), Min/Max (Bereich)',
+        },
+        precipitation: {
+            title: 'Niederschlag',
+            description: 'Niederschlag (mm) für alle Stationen',
+        },
+        humidity: {
+            title: 'Luftfeuchtigkeit',
+            description:
+                'Luftfeuchtigkeit (%) – Mittelwert (Linie), Min/Max (Bereich)',
+        },
+        wind: {
+            title: 'Wind',
+            description: 'Windgeschwindigkeit (km/h) – Mittelwert',
+        },
+        sunshine: {
+            title: 'Sonnenschein',
+            description: 'Sonnenscheindauer (h) für alle Stationen',
+        },
+    };
+
+    return (
+        [
+            'temperature',
+            'precipitation',
+            'humidity',
+            'wind',
+            'sunshine',
+        ] as const
+    ).map((dimension) => {
+        let title = baseTitles[dimension].title;
+
+        // Add month and year range for monthly-yearly trends
+        if (isMonthlyYearlyQuery.value && props.results?.monthYearRange) {
+            const { month, startYear, endYear } = props.results.monthYearRange;
+            const monthName = monthNames[month - 1];
+            const adjective = getAdjectiveForDimension(dimension);
+            title = `${adjective} im ${monthName}, ${startYear} - ${endYear}`;
+        }
+
+        return {
+            key: dimension,
+            title,
+            description: baseTitles[dimension].description,
+        };
+    });
+});
+
+const getAdjectiveForDimension = (dimension: DimensionKey): string => {
+    const adjectives: Record<DimensionKey, string> = {
+        temperature: 'Temperaturen',
+        precipitation: 'Niederschläge',
+        humidity: 'Luftfeuchtigkeiten',
+        wind: 'Windgeschwindigkeiten',
+        sunshine: 'Sonnenscheindauer',
+    };
+    return adjectives[dimension];
+};
 
 const infoDrawerOpen = ref(false);
 const hasInfo = computed(
@@ -436,6 +511,9 @@ const handleCarouselInit = (api: CarouselApi) => {
                                                     props.results.stations
                                                 "
                                                 :tick-formatter="tickFormatter"
+                                                :is-monthly-yearly="
+                                                    isMonthlyYearlyQuery
+                                                "
                                             />
                                         </CardContent>
                                     </Card>

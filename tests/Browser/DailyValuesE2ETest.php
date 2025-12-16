@@ -3,23 +3,12 @@
 use Illuminate\Support\Facades\Http;
 use Tests\Helpers\AemetFixtures;
 
+use function Tests\Helpers\configurePage;
+
 // Set up HTTP fakes once for all tests
 beforeEach(function () {
     Http::fake(AemetFixtures::httpFakeConfig());
 });
-
-/**
- * Configure page with device and theme settings
- */
-function configurePage(string $url, string $device, bool $darkMode)
-{
-    $page = match ($device) {
-        'mobile' => $darkMode ? visit($url)->on()->iPhone14Pro()->inDarkMode() : visit($url)->on()->iPhone14Pro(),
-        default => $darkMode ? visit($url)->inDarkMode() : visit($url),
-    };
-
-    return $page;
-}
 
 it('completes the full workflow from home page to data display for daily values', function (string $device, bool $darkMode) {
     // 1. Navigate directly to data-options step with pre-selected stations

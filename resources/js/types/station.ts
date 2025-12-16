@@ -13,20 +13,7 @@ export interface StationInfo {
     provincia?: string | null;
 }
 
-export interface ChartDataPoint {
-    time: Date;
-    temperature: number | null;
-    temperatureMax?: number | null;
-    temperatureMin?: number | null;
-    precipitation: number | null;
-    humidity: number | null;
-    humidityMax?: number | null;
-    humidityMin?: number | null;
-    wind: number | null;
-    sunshine?: number | null;
-}
-
-import type { DateRangeSelection } from '@/types/data-query';
+import type { DateRangeSelection, MonthYearRange } from '@/types/data-query';
 
 export interface QueryResults {
     queryType: string;
@@ -34,4 +21,5 @@ export interface QueryResults {
     observations: any[];
     stations: Record<string, { name?: string; provincia?: string | null }>;
     dateRange?: DateRangeSelection;
+    monthYearRange?: MonthYearRange;
 }

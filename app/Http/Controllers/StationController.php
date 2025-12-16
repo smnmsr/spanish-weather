@@ -40,20 +40,28 @@ class StationController
             ];
         }
 
-        $selectedStations = session('selected_stations', []);
+        // Parse selected stations from URL query parameters
+        $stationsParam = $request->query('stations', '');
+        $selectedStations = [];
+        if ($stationsParam !== '' && $stationsParam !== []) {
+            // Handle both string (comma-separated) and array inputs
+            if (is_array($stationsParam)) {
+                $selectedStations = array_filter(
+                    array_map('trim', $stationsParam),
+                    fn ($id) => strlen($id) > 0
+                );
+            } else {
+                $selectedStations = array_filter(
+                    array_map('trim', explode(',', $stationsParam)),
+                    fn ($id) => strlen($id) > 0
+                );
+            }
+        }
 
         return Inertia::render('Stations/Tool', [
             'stations' => $mapped,
             'selectedStations' => $selectedStations,
         ]);
-    }
-
-    public function saveSelection(Request $request)
-    {
-        $stations = $request->input('stations', []);
-        session(['selected_stations' => $stations]);
-
-        return redirect()->route('home')->with('success', 'Auswahl gespeichert!');
     }
 
     public function queryData(Request $request)
@@ -64,6 +72,9 @@ class StationController
             'stationIds.*' => 'required|string',
             'dateRange.startDate' => 'required_if:type,daily-values|date',
             'dateRange.endDate' => 'required_if:type,daily-values|date|after_or_equal:dateRange.startDate',
+            'monthYearRange.month' => 'required_if:type,monthly-yearly-trends|integer|min:1|max:12',
+            'monthYearRange.startYear' => 'required_if:type,monthly-yearly-trends|integer|min:1900',
+            'monthYearRange.endYear' => 'required_if:type,monthly-yearly-trends|integer|min:1900',
         ]);
 
         $type = $validated['type'];
@@ -156,6 +167,85 @@ class StationController
                 'dateRange' => [
                     'startDate' => $startDate,
                     'endDate' => $endDate,
+                ],
+            ]);
+        }
+
+        if ($type === 'monthly-yearly-trends') {
+            $month = data_get($validated, 'monthYearRange.month');
+            $startYear = data_get($validated, 'monthYearRange.startYear');
+            $endYear = data_get($validated, 'monthYearRange.endYear');
+
+            $allStations = $this->aemet->getAllStations();
+            $stationDetails = [];
+
+            foreach ($allStations as $station) {
+                $stationId = $station['idema'] ?? $station['indicativo'] ?? null;
+
+                if ($stationId && in_array($stationId, $stationIds)) {
+                    $stationDetails[$stationId] = [
+                        'id' => $stationId,
+                        'name' => $station['nombre'] ?? $station['ub'] ?? 'Unknown',
+                        'provincia' => $station['provincia'] ?? null,
+                    ];
+                }
+            }
+
+            $monthlyData = [];
+
+            try {
+                foreach ($stationIds as $stationId) {
+                    $data = $this->aemet->getMonthlyAnnualData($stationId, (int) $startYear, (int) $endYear);
+
+                    // Filter to only the selected month
+                    // fecha format is "YYYY-MM" (e.g., "2020-10")
+                    $filteredData = array_filter($data, function (array $entry) use ($month) {
+                        $fecha = $entry['fecha'] ?? '';
+                        if (empty($fecha)) {
+                            return false;
+                        }
+
+                        // Extract month from YYYY-MM format
+                        $parts = explode('-', $fecha);
+                        if (count($parts) !== 2) {
+                            return false;
+                        }
+
+                        $entryMonth = (int) $parts[1];
+
+                        return $entryMonth === (int) $month;
+                    });
+
+                    $normalized = array_map(function (array $entry) use ($stationId) {
+                        return array_merge($entry, [
+                            'idema' => $entry['idema'] ?? $entry['indicativo'] ?? $stationId,
+                        ]);
+                    }, $filteredData);
+
+                    $monthlyData = array_merge($monthlyData, $normalized);
+                }
+            } catch (\RuntimeException $e) {
+                Log::error('Error fetching monthly/annual data', [
+                    'message' => $e->getMessage(),
+                    'stationIds' => $stationIds,
+                    'monthYearRange' => [$month, $startYear, $endYear],
+                ]);
+
+                return response()->json([
+                    'error' => 'AEMET API is currently unavailable. Please try again in a few minutes.',
+                    'type' => 'api_outage',
+                ], 503);
+            }
+
+            return response()->json([
+                'queryType' => $type,
+                'observations' => $monthlyData,
+                'stations' => $stationDetails,
+                'selectedStationIds' => $stationIds,
+                'monthYearRange' => [
+                    'month' => $month,
+                    'startYear' => $startYear,
+                    'endYear' => $endYear,
                 ],
             ]);
         }

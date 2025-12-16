@@ -3,18 +3,7 @@
 use Illuminate\Support\Facades\Http;
 use Tests\Helpers\AemetFixtures;
 
-/**
- * Configure page with device and theme settings
- */
-function configurePage(string $url, string $device, bool $darkMode)
-{
-    $page = match ($device) {
-        'mobile' => $darkMode ? visit($url)->on()->iPhone14Pro()->inDarkMode() : visit($url)->on()->iPhone14Pro(),
-        default => $darkMode ? visit($url)->inDarkMode() : visit($url),
-    };
-
-    return $page;
-}
+use function Tests\Helpers\configurePage;
 
 it('completes the full workflow from home page to data display for current observations 24h', function (string $device, bool $darkMode) {
     // Mock AEMET API with realistic test data

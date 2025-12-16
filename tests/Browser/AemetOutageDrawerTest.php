@@ -37,7 +37,7 @@ it('zeigt den lustigen Siesta-Drawer wenn AEMET nicht erreichbar ist', function 
 
     // Assert the drawer is visible with the content
     $page->assertSee('Der Spanische Wetterdienst macht gerade Siesta')
-        ->assertSee('Die API des Spanischen Wetterdiensts (AEMET) ist derzeit nicht erreichbar. Das passiert einigermassen oft, leider. Bite versuche es in ca. 10 Minuten erneut.')
+        ->assertSee('Die API des Spanischen Wetterdiensts (AEMET) ist derzeit nicht erreichbar. Das passiert einigermassen oft, leider. Bitte versuche es in ca. 10 Minuten erneut.')
         ->assertSee('Alles klar');
 
     // Take a screenshot of the outage drawer

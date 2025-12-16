@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import DateRangeSelector from '@/components/DateRangeSelector.vue';
+import MonthYearSelector from '@/components/MonthYearSelector.vue';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -18,7 +19,11 @@ import {
 } from '@/components/ui/carousel';
 import { Drawer, DrawerClose, DrawerContent } from '@/components/ui/drawer';
 import { Spinner } from '@/components/ui/spinner';
-import type { DataQueryType, DateRangeSelection } from '@/types/data-query';
+import type {
+    DataQueryType,
+    DateRangeSelection,
+    MonthYearRange,
+} from '@/types/data-query';
 import { DATA_QUERY_OPTIONS } from '@/types/data-query';
 import {
     AlertCircle,
@@ -43,6 +48,7 @@ interface Props {
     selectedDataQuery: DataQueryType | null;
     isLoadingResults: boolean;
     dateRange: DateRangeSelection | null;
+    monthYearRange: MonthYearRange | null;
 }
 
 const props = defineProps<Props>();
@@ -53,6 +59,7 @@ const emit = defineEmits<{
     (e: 'proceed-with-data-query'): void;
     (e: 'update-date-range', range: DateRangeSelection): void;
     (e: 'apply-date-preset', preset: string): void;
+    (e: 'update-month-year-range', range: MonthYearRange): void;
 }>();
 
 const showOutageDrawer = ref(false);
@@ -61,11 +68,19 @@ const tweenFactor = ref(0);
 const tweenNodes = ref<HTMLElement[]>([]);
 const isInitializing = ref(true);
 
-const requiresDateRange = computed(
-    () =>
-        DATA_QUERY_OPTIONS.find((o) => o.type === props.selectedDataQuery)
-            ?.requiresDateRange ?? false,
-);
+const requiresDateRange = computed(() => {
+    const option = DATA_QUERY_OPTIONS.find(
+        (o) => o.type === props.selectedDataQuery,
+    );
+    return (
+        option?.requiresDateRange &&
+        props.selectedDataQuery !== 'monthly-yearly-trends'
+    );
+});
+
+const requiresMonthYearRange = computed(() => {
+    return props.selectedDataQuery === 'monthly-yearly-trends';
+});
 
 // Intercept proceed emission to allow UI error handling based on fetch errors
 function handleProceed() {
@@ -306,6 +321,14 @@ onMounted(() => {
                 @apply-preset="emit('apply-date-preset', $event)"
             />
 
+            <MonthYearSelector
+                v-if="props.selectedDataQuery && requiresMonthYearRange"
+                :month-year-range="props.monthYearRange"
+                @update-month-year-range="
+                    emit('update-month-year-range', $event)
+                "
+            />
+
             <div
                 class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             >
@@ -324,7 +347,11 @@ onMounted(() => {
                         props.isLoadingResults ||
                         (requiresDateRange &&
                             (!props.dateRange?.startDate ||
-                                !props.dateRange?.endDate))
+                                !props.dateRange?.endDate)) ||
+                        (requiresMonthYearRange &&
+                            (!props.monthYearRange?.month ||
+                                !props.monthYearRange?.startYear ||
+                                !props.monthYearRange?.endYear))
                     "
                 >
                     <Spinner
@@ -356,7 +383,7 @@ onMounted(() => {
                             >
                                 Die API des Spanischen Wetterdiensts (AEMET) ist
                                 derzeit nicht erreichbar. Das passiert
-                                einigermassen oft, leider. Bite versuche es in
+                                einigermassen oft, leider. Bitte versuche es in
                                 ca. 10 Minuten erneut.
                             </p>
                         </div>

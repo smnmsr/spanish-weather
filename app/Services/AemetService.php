@@ -108,6 +108,53 @@ class AemetService
     }
 
     /**
+     * Get monthly/annual climate data for a specific station and year range.
+     *
+     * AEMET API has a 36-month (3-year) maximum range limitation.
+     * This method automatically chunks larger requests into 3-year chunks.
+     *
+     * @param  string  $stationId  Station identifier (idema/indicativo)
+     * @param  int  $startYear  Start year (e.g., 2015)
+     * @param  int  $endYear  End year (e.g., 2024)
+     * @return array Array of monthly/annual climate records
+     */
+    public function getMonthlyAnnualData(string $stationId, int $startYear, int $endYear): array
+    {
+        $cacheKey = "aemet_monthly_annual_{$stationId}_{$startYear}_{$endYear}";
+        $cacheTtl = config('aemet.cache_ttl.historical_data');
+
+        return Cache::remember($cacheKey, $cacheTtl, function () use ($stationId, $startYear, $endYear) {
+            // AEMET API has a 36-month maximum range
+            // Split larger requests into 3-year chunks
+            $maxYearSpan = 3;
+            $allData = [];
+
+            $currentStart = $startYear;
+            while ($currentStart <= $endYear) {
+                $currentEnd = min($currentStart + $maxYearSpan - 1, $endYear);
+
+                $endpoint = "/api/valores/climatologicos/mensualesanuales/datos/anioini/{$currentStart}/aniofin/{$currentEnd}/estacion/{$stationId}";
+
+                try {
+                    $chunkData = $this->makeRequest($endpoint);
+                    $allData = array_merge($allData, $chunkData);
+                } catch (\RuntimeException $e) {
+                    // Log the error but continue with other chunks
+                    Log::warning('Error fetching monthly/annual data chunk', [
+                        'stationId' => $stationId,
+                        'years' => "{$currentStart}-{$currentEnd}",
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                $currentStart = $currentEnd + 1;
+            }
+
+            return $allData;
+        });
+    }
+
+    /**
      * Make a request to the AEMET API using the two-step process.
      *
      * Step 1: Request the data URL

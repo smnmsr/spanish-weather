@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ChartLegend from '@/components/ChartLegend.vue';
-import type { ChartDataPoint } from '@/types/station';
+import type { ChartDataPoint } from '@/types';
 import {
     VisArea,
     VisAxis,
@@ -21,6 +21,7 @@ interface Props {
     data: Record<string, ChartDataPoint[]>;
     stations: Record<string, { name?: string; provincia?: string | null }>;
     tickFormatter?: (value: number) => string;
+    isMonthlyYearly?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -86,11 +87,18 @@ const axisTickFormatter = computed(
         props.tickFormatter ??
         ((d: number) => {
             const date = new Date(d);
-            return date.toLocaleDateString('de-DE', {
-                day: '2-digit',
-                month: '2-digit',
-                hour: '2-digit',
-            });
+            try {
+                return date.toLocaleDateString('de-DE', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                });
+            } catch {
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const hour = String(date.getHours()).padStart(2, '0');
+                return `${day}.${month} ${hour}`;
+            }
         }),
 );
 
@@ -120,6 +128,32 @@ const stationsWithValidData = computed(() => {
     });
 });
 
+// Extract unique years from data for explicit tick positioning in monthly-yearly trends
+const explicitTicks = computed(() => {
+    if (!props.isMonthlyYearly) {
+        return undefined;
+    }
+
+    const years = new Set<number>();
+
+    // Collect all unique years from the data
+    stationsWithValidData.value.forEach((stationId) => {
+        props.data[stationId]?.forEach((point) => {
+            const year = new Date(point.time).getFullYear();
+            years.add(year);
+        });
+    });
+
+    if (years.size === 0) {
+        return undefined;
+    }
+
+    // Convert to sorted array of timestamp values representing Jan 1 of each year
+    return Array.from(years)
+        .sort((a, b) => a - b)
+        .map((year) => new Date(year, 0, 1).getTime());
+});
+
 // Transform data for visualization
 const chartData = computed(() => {
     const allTimePoints = new Set<number>();
@@ -127,7 +161,8 @@ const chartData = computed(() => {
     // Collect all unique time points from stations with valid data
     stationsWithValidData.value.forEach((stationId) => {
         props.data[stationId]?.forEach((point) => {
-            allTimePoints.add(point.time.getTime());
+            // point.time is already a Unix timestamp in milliseconds
+            allTimePoints.add(point.time);
         });
     });
 
@@ -157,7 +192,7 @@ const chartData = computed(() => {
 
         stationsWithValidData.value.forEach((stationId) => {
             const point = props.data[stationId]?.find(
-                (p) => p.time.getTime() === timestamp,
+                (p) => p.time === timestamp,
             );
 
             // Main value (mean or only value)
@@ -333,6 +368,7 @@ const yDomain = computed(() => {
                     type="x"
                     :x="(d: any) => d.time"
                     :tick-format="axisTickFormatter"
+                    :ticks="explicitTicks"
                     :grid-line="false"
                     :tick-line="false"
                 />

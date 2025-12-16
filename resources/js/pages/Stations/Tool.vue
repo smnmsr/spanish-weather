@@ -12,9 +12,12 @@ import MapStep from '@/pages/Stations/Tool/MapStep.vue';
 import ResultsSection from '@/pages/Stations/Tool/ResultsSection.vue';
 import WelcomeStep from '@/pages/Stations/Tool/WelcomeStep.vue';
 import type { BreadcrumbItemType } from '@/types';
-import type { DataQueryType, DateRangeSelection } from '@/types/data-query';
+import type {
+    DataQueryType,
+    DateRangeSelection,
+    MonthYearRange,
+} from '@/types/data-query';
 import type { Station } from '@/types/station';
-import { router } from '@inertiajs/vue3';
 import { ChartBar, Database, Home, Map } from 'lucide-vue-next';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
@@ -37,6 +40,7 @@ const dataOptionsRef = ref<HTMLElement | null>(null);
 const selectedIds = ref<Set<string>>(new Set(props.selectedStations));
 const selectedDataQuery = ref<DataQueryType | null>(null);
 const selectedDateRange = ref<DateRangeSelection | null>(null);
+const selectedMonthYearRange = ref<MonthYearRange | null>(null);
 const queryResults = ref<any>(null);
 const isLoadingResults = ref(false);
 const resultsSectionRef = ref<HTMLElement | null>(null);
@@ -108,6 +112,8 @@ const chartDataByStation = computed(() => {
     const result: Record<string, any[]> = {};
 
     const isDaily = queryResults.value?.queryType === 'daily-values';
+    const isMonthlyYearly =
+        queryResults.value?.queryType === 'monthly-yearly-trends';
 
     Object.keys(groupedObservations.value).forEach((stationId) => {
         const observations = groupedObservations.value[stationId];
@@ -119,15 +125,27 @@ const chartDataByStation = computed(() => {
         });
 
         result[stationId] = sorted.map((obs: any, index: number) => {
-            const timeValue = isDaily ? obs.fecha : obs.fint;
+            // Get time value based on query type
+            let timeValue: string | undefined;
+            if (isDaily) {
+                timeValue = obs.fecha; // Daily data format: YYYY-MM-DD
+            } else if (isMonthlyYearly) {
+                // Monthly data format: YYYY-MM (need to add day for valid Date parsing)
+                timeValue = obs.fecha ? `${obs.fecha}-01` : undefined;
+            } else {
+                timeValue = obs.fint; // Hourly observation format: YYYY-MM-DDTHH:MM:SS
+            }
+
             const date = timeValue ? new Date(timeValue) : new Date();
 
-            // Debug: Log first observation to see available fields
-            if (isDaily && index === 0) {
+            // Debug: Log first observation to see available fields (only in dev mode)
+            if (index === 0 && import.meta.env.DEV) {
                 console.log(
-                    'Daily observation fields for station',
+                    'Observation fields for station',
                     stationId,
-                    ':',
+                    '(type:',
+                    queryResults.value?.queryType,
+                    '):',
                     Object.keys(obs),
                 );
             }
@@ -148,7 +166,7 @@ const chartDataByStation = computed(() => {
                     obs.sol ?? obs.insolacion ?? obs.radiacion ?? null;
 
                 return {
-                    time: date,
+                    time: date.getTime(),
                     temperature: parseValue(obs.tmed),
                     temperatureMax: parseValue(obs.tmax),
                     temperatureMin: parseValue(obs.tmin),
@@ -159,10 +177,24 @@ const chartDataByStation = computed(() => {
                     wind: parseValue(obs.velmedia),
                     sunshine: parseValue(sunshineValue),
                 };
+            } else if (isMonthlyYearly) {
+                // Monthly/yearly climate data has: tm_mes (avg), tm_max, tm_min, p_mes (precip), hr (humidity)
+                return {
+                    time: date.getTime(),
+                    temperature: parseValue(obs.tm_mes),
+                    temperatureMax: parseValue(obs.tm_max),
+                    temperatureMin: parseValue(obs.tm_min),
+                    humidity: parseValue(obs.hr),
+                    humidityMax: null,
+                    humidityMin: null,
+                    precipitation: parseValue(obs.p_mes),
+                    wind: null,
+                    sunshine: null,
+                };
             } else {
                 // Hourly observation data: ta, hr, prec, vv
                 return {
-                    time: date,
+                    time: date.getTime(),
                     temperature: parseValue(obs.ta),
                     temperatureMax: null,
                     temperatureMin: null,
@@ -236,6 +268,19 @@ function computePresetRange(
     return {
         startDate: formatDateInput(start),
         endDate: end,
+    };
+}
+
+function computeMonthYearPresetRange(
+    preset: 'last5' | 'last10' | 'last20',
+): MonthYearRange {
+    const currentYear = new Date().getFullYear();
+    const yearSpan = preset === 'last5' ? 5 : preset === 'last10' ? 10 : 20;
+
+    return {
+        month: 1, // Always use Januar (January) as default
+        startYear: currentYear - yearSpan + 1,
+        endYear: currentYear,
     };
 }
 
@@ -325,6 +370,30 @@ function updateUrlStep(step: 'welcome' | 'map' | 'data-options' | 'results') {
         url.searchParams.delete('end');
     }
 
+    if (
+        selectedDataQuery.value === 'monthly-yearly-trends' &&
+        selectedMonthYearRange.value?.month &&
+        selectedMonthYearRange.value?.startYear &&
+        selectedMonthYearRange.value?.endYear
+    ) {
+        url.searchParams.set(
+            'month',
+            String(selectedMonthYearRange.value.month),
+        );
+        url.searchParams.set(
+            'startYear',
+            String(selectedMonthYearRange.value.startYear),
+        );
+        url.searchParams.set(
+            'endYear',
+            String(selectedMonthYearRange.value.endYear),
+        );
+    } else {
+        url.searchParams.delete('month');
+        url.searchParams.delete('startYear');
+        url.searchParams.delete('endYear');
+    }
+
     window.history.replaceState({}, '', url.toString());
     currentStep.value = step;
 }
@@ -354,6 +423,30 @@ function updateUrlSelectionAndAnalysis() {
     } else {
         url.searchParams.delete('start');
         url.searchParams.delete('end');
+    }
+
+    if (
+        selectedDataQuery.value === 'monthly-yearly-trends' &&
+        selectedMonthYearRange.value?.month &&
+        selectedMonthYearRange.value?.startYear &&
+        selectedMonthYearRange.value?.endYear
+    ) {
+        url.searchParams.set(
+            'month',
+            String(selectedMonthYearRange.value.month),
+        );
+        url.searchParams.set(
+            'startYear',
+            String(selectedMonthYearRange.value.startYear),
+        );
+        url.searchParams.set(
+            'endYear',
+            String(selectedMonthYearRange.value.endYear),
+        );
+    } else {
+        url.searchParams.delete('month');
+        url.searchParams.delete('startYear');
+        url.searchParams.delete('endYear');
     }
 
     window.history.replaceState({}, '', url.toString());
@@ -404,6 +497,11 @@ function updateDateRange(range: DateRangeSelection) {
     updateUrlSelectionAndAnalysis();
 }
 
+function updateMonthYearRange(range: MonthYearRange) {
+    selectedMonthYearRange.value = range;
+    updateUrlSelectionAndAnalysis();
+}
+
 function goToStep(stepIndex: number) {
     const stepName = stepsOrder[stepIndex - 1];
     if (!stepName) return;
@@ -424,13 +522,28 @@ function goToStep(stepIndex: number) {
 
 function selectDataQuery(queryType: DataQueryType) {
     selectedDataQuery.value = queryType;
-    // reflect analysis in URL
+
+    // Auto-populate date range for daily-values
     if (queryType === 'daily-values' && !selectedDateRange.value) {
         selectedDateRange.value = computePresetRange('last7');
     }
 
+    // Auto-populate month/year range for monthly-yearly-trends
+    if (
+        queryType === 'monthly-yearly-trends' &&
+        !selectedMonthYearRange.value
+    ) {
+        selectedMonthYearRange.value = computeMonthYearPresetRange('last5');
+    }
+
+    // Clear date range for types that don't need it
     if (queryType !== 'daily-values') {
         selectedDateRange.value = null;
+    }
+
+    // Clear month/year range for types that don't need it
+    if (queryType !== 'monthly-yearly-trends') {
+        selectedMonthYearRange.value = null;
     }
 
     updateUrlSelectionAndAnalysis();
@@ -447,20 +560,20 @@ function applyDatePreset(presetKey: string) {
     }
 }
 
-function saveSelection() {
-    router.post(
-        '/save-selection',
-        {
-            stations: Array.from(selectedIds.value),
-        },
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                // Show success message
-            },
-        },
-    );
-    // reflect selection in URL
+function toggleStation(stationId: string) {
+    const MAX_STATIONS = 5;
+
+    if (selectedIds.value.has(stationId)) {
+        selectedIds.value.delete(stationId);
+    } else {
+        // Prevent adding more than MAX_STATIONS
+        if (selectedIds.value.size >= MAX_STATIONS) {
+            return;
+        }
+        selectedIds.value.add(stationId);
+    }
+
+    // Persist selection in URL
     updateUrlSelectionAndAnalysis();
 }
 
@@ -469,10 +582,21 @@ async function proceedWithDataQuery() {
         return;
     }
 
+    // Validate daily-values has date range
     if (
         selectedDataQuery.value === 'daily-values' &&
         (!selectedDateRange.value?.startDate ||
             !selectedDateRange.value?.endDate)
+    ) {
+        return;
+    }
+
+    // Validate monthly-yearly-trends has month/year range
+    if (
+        selectedDataQuery.value === 'monthly-yearly-trends' &&
+        (!selectedMonthYearRange.value?.month ||
+            !selectedMonthYearRange.value?.startYear ||
+            !selectedMonthYearRange.value?.endYear)
     ) {
         return;
     }
@@ -496,6 +620,7 @@ async function proceedWithDataQuery() {
                 type: selectedDataQuery.value,
                 stationIds: Array.from(selectedIds.value),
                 dateRange: selectedDateRange.value ?? undefined,
+                monthYearRange: selectedMonthYearRange.value ?? undefined,
             }),
         });
 
@@ -540,24 +665,7 @@ function resetSelection() {
     queryResults.value = null;
     selectedDataQuery.value = null;
     selectedDateRange.value = null;
-    saveSelection();
-    updateUrlSelectionAndAnalysis();
-}
-
-function toggleStation(stationId: string) {
-    const MAX_STATIONS = 5;
-
-    if (selectedIds.value.has(stationId)) {
-        selectedIds.value.delete(stationId);
-    } else {
-        // Prevent adding more than MAX_STATIONS
-        if (selectedIds.value.size >= MAX_STATIONS) {
-            return;
-        }
-        selectedIds.value.add(stationId);
-    }
-
-    // persist selection in URL
+    selectedMonthYearRange.value = null;
     updateUrlSelectionAndAnalysis();
 }
 
@@ -598,11 +706,29 @@ onMounted(() => {
         };
     }
 
+    const monthParam = params.get('month');
+    const startYearParam = params.get('startYear');
+    const endYearParam = params.get('endYear');
+    if (monthParam && startYearParam && endYearParam) {
+        selectedMonthYearRange.value = {
+            month: parseInt(monthParam, 10),
+            startYear: parseInt(startYearParam, 10),
+            endYear: parseInt(endYearParam, 10),
+        };
+    }
+
     if (
         selectedDataQuery.value === 'daily-values' &&
         !selectedDateRange.value
     ) {
         selectedDateRange.value = computePresetRange('last7');
+    }
+
+    if (
+        selectedDataQuery.value === 'monthly-yearly-trends' &&
+        !selectedMonthYearRange.value
+    ) {
+        selectedMonthYearRange.value = computeMonthYearPresetRange('last5');
     }
 
     // Auto-trigger query if step=results and we have stations + analysis
@@ -685,6 +811,7 @@ onUnmounted(() => {
                                     :selected-data-query="selectedDataQuery"
                                     :is-loading-results="isLoadingResults"
                                     :date-range="selectedDateRange"
+                                    :month-year-range="selectedMonthYearRange"
                                     @go-to-map="goToStep(2)"
                                     @select-data-query="selectDataQuery"
                                     @proceed-with-data-query="
@@ -692,6 +819,9 @@ onUnmounted(() => {
                                     "
                                     @update-date-range="updateDateRange"
                                     @apply-date-preset="applyDatePreset"
+                                    @update-month-year-range="
+                                        updateMonthYearRange
+                                    "
                                 />
                             </div>
                         </template>

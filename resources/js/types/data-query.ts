@@ -25,11 +25,18 @@ export interface YearRangeSelection {
     endYear: number;
 }
 
+export interface MonthYearRange {
+    month: number; // 1-12 (January = 1, December = 12)
+    startYear: number;
+    endYear: number;
+}
+
 export interface DataQueryRequest {
     type: DataQueryType;
     stationIds: string[];
     dateRange?: DateRangeSelection;
     yearRange?: YearRangeSelection;
+    monthYearRange?: MonthYearRange;
     parameters?: string[];
 }
 

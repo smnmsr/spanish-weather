@@ -14,28 +14,13 @@ it('renders the station tool page', function () {
     );
 })->skipOnCi();
 
-it('saves selected stations to session', function () {
+it('reads selected stations from query parameters', function () {
     $selectedStations = ['station1', 'station2', 'station3'];
+    $stationsParam = implode(',', $selectedStations);
 
-    $response = $this->post(route('save.selection'), [
-        'stations' => $selectedStations,
-    ]);
+    $response = $this->get(route('home', ['stations' => $stationsParam]));
 
-    $response->assertRedirect(route('home'));
-
-    expect(session('selected_stations'))->toBe($selectedStations);
-})->skipOnCi();
-
-it('persists selected stations across requests', function () {
-    $selectedStations = ['station1', 'station2'];
-
-    // Save stations
-    $this->post(route('save.selection'), [
-        'stations' => $selectedStations,
-    ]);
-
-    // Load the tool page again
-    $response = $this->get(route('home'));
+    $response->assertSuccessful();
 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('Stations/Tool')
@@ -43,12 +28,27 @@ it('persists selected stations across requests', function () {
     );
 })->skipOnCi();
 
-it('handles empty station selection', function () {
-    $response = $this->post(route('save.selection'), [
-        'stations' => [],
-    ]);
+it('persists selected stations across requests via URL', function () {
+    $selectedStations = ['station1', 'station2'];
+    $stationsParam = implode(',', $selectedStations);
 
-    $response->assertRedirect(route('home'));
+    $response = $this->get(route('home', ['stations' => $stationsParam]));
 
-    expect(session('selected_stations'))->toBe([]);
+    $response->assertSuccessful();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Stations/Tool')
+        ->where('selectedStations', $selectedStations)
+    );
+})->skipOnCi();
+
+it('handles empty station selection from query parameters', function () {
+    $response = $this->get(route('home', ['stations' => '']));
+
+    $response->assertSuccessful();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Stations/Tool')
+        ->where('selectedStations', [])
+    );
 })->skipOnCi();
