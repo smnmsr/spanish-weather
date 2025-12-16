@@ -55,6 +55,10 @@ const isMonthlyYearlyQuery = computed(
     () => props.results?.queryType === 'monthly-yearly-trends',
 );
 
+const isNormalsQuery = computed(
+    () => props.results?.queryType === 'climatological-normals',
+);
+
 const isExtremeValuesQuery = computed(
     () => props.results?.queryType === 'extreme-values',
 );
@@ -79,6 +83,16 @@ const tickFormatter = computed(() => (value: number) => {
         // For monthly-yearly trends, show only 2-digit year (95, 96, 97, etc.)
         const year = date.getFullYear();
         return String(year).slice(-2);
+    }
+
+    if (isNormalsQuery.value) {
+        try {
+            return date.toLocaleDateString('de-DE', { month: 'short' });
+        } catch {
+            // Fallback: numeric month
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            return month;
+        }
     }
 
     try {

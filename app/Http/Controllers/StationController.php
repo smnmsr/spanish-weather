@@ -302,6 +302,65 @@ class StationController
             ]);
         }
 
+        if ($type === 'climatological-normals') {
+            $allStations = $this->aemet->getAllStations();
+            $stationDetails = [];
+
+            foreach ($allStations as $station) {
+                $stationId = $station['idema'] ?? $station['indicativo'] ?? null;
+
+                if ($stationId && in_array($stationId, $stationIds)) {
+                    $stationDetails[$stationId] = [
+                        'id' => $stationId,
+                        'name' => $station['nombre'] ?? $station['ub'] ?? 'Unknown',
+                        'provincia' => $station['provincia'] ?? null,
+                    ];
+                }
+            }
+
+            $normalsData = [];
+
+            try {
+                foreach ($stationIds as $stationId) {
+                    $data = $this->aemet->getClimateNormals($stationId);
+
+                    // Normalize records: ensure station id and construct a canonical date per month
+                    foreach ($data as $entry) {
+                        // Some entries may be summary/annual records; only consider monthly entries when 'mes' is present
+                        $month = (int) ($entry['mes'] ?? 0);
+                        if ($month < 1 || $month > 12) {
+                            continue;
+                        }
+
+                        $normalized = array_merge($entry, [
+                            'idema' => $entry['indicativo'] ?? $stationId,
+                            // Use neutral year for chart X-axis, e.g., 2000-MM-01
+                            'fecha' => sprintf('2000-%02d-01', $month),
+                        ]);
+
+                        $normalsData[] = $normalized;
+                    }
+                }
+            } catch (\RuntimeException $e) {
+                Log::error('Error fetching climatological normals', [
+                    'message' => $e->getMessage(),
+                    'stationIds' => $stationIds,
+                ]);
+
+                return response()->json([
+                    'error' => 'AEMET API is currently unavailable. Please try again in a few minutes.',
+                    'type' => 'api_outage',
+                ], 503);
+            }
+
+            return response()->json([
+                'queryType' => $type,
+                'observations' => $normalsData,
+                'stations' => $stationDetails,
+                'selectedStationIds' => $stationIds,
+            ]);
+        }
+
         // TODO: Handle other query types
         return response()->json([
             'error' => 'Dieser Datentyp wird noch nicht unterstützt.',

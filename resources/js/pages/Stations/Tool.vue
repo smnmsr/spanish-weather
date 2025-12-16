@@ -114,13 +114,15 @@ const chartDataByStation = computed(() => {
     const isDaily = queryResults.value?.queryType === 'daily-values';
     const isMonthlyYearly =
         queryResults.value?.queryType === 'monthly-yearly-trends';
+    const isNormals =
+        queryResults.value?.queryType === 'climatological-normals';
 
     Object.keys(groupedObservations.value).forEach((stationId) => {
         const observations = groupedObservations.value[stationId];
 
         const sorted = [...observations].sort((a, b) => {
-            const timeA = isDaily ? a.fecha || '' : a.fint || '';
-            const timeB = isDaily ? b.fecha || '' : b.fint || '';
+            const timeA = isDaily || isNormals ? a.fecha || '' : a.fint || '';
+            const timeB = isDaily || isNormals ? b.fecha || '' : b.fint || '';
             return timeA.localeCompare(timeB);
         });
 
@@ -132,6 +134,9 @@ const chartDataByStation = computed(() => {
             } else if (isMonthlyYearly) {
                 // Monthly data format: YYYY-MM (need to add day for valid Date parsing)
                 timeValue = obs.fecha ? `${obs.fecha}-01` : undefined;
+            } else if (isNormals) {
+                // Normals use canonical YYYY-MM-DD built in controller
+                timeValue = obs.fecha;
             } else {
                 timeValue = obs.fint; // Hourly observation format: YYYY-MM-DDTHH:MM:SS
             }
@@ -188,6 +193,21 @@ const chartDataByStation = computed(() => {
                     humidityMax: null,
                     humidityMin: null,
                     precipitation: parseValue(obs.p_mes),
+                    wind: null,
+                    sunshine: null,
+                };
+            } else if (isNormals) {
+                // Climatological normals: use monthly means across 1991–2020
+                // Prefer *_md (mean) fields if available
+                return {
+                    time: date.getTime(),
+                    temperature: parseValue(obs.tm_mes_md ?? obs.tm_mes),
+                    temperatureMax: parseValue(obs.tm_max_md ?? obs.tm_max),
+                    temperatureMin: parseValue(obs.tm_min_md ?? obs.tm_min),
+                    humidity: parseValue(obs.hr_md ?? obs.hr),
+                    humidityMax: null,
+                    humidityMin: null,
+                    precipitation: parseValue(obs.p_mes_md ?? obs.p_mes),
                     wind: null,
                     sunshine: null,
                 };
