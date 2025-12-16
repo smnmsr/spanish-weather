@@ -108,6 +108,61 @@ class AemetService
     }
 
     /**
+     * Get extreme values (records) for a specific station.
+     * Aggregates temperature (T), precipitation (P), and wind (V) parameters into a single response.
+     *
+     * @param  string  $stationId  Station identifier (idema/indicativo)
+     * @return array Array with 'temperature', 'precipitation', 'wind' keys, each containing extreme value records
+     */
+    public function getExtremeValues(string $stationId): array
+    {
+        $cacheKey = "aemet_extreme_values_{$stationId}";
+        $cacheTtl = 30 * 24 * 60 * 60; // 30 days
+
+        return Cache::remember($cacheKey, $cacheTtl, function () use ($stationId) {
+            $parameters = [
+                'temperature' => 'T',
+                'precipitation' => 'P',
+                'wind' => 'V',
+            ];
+
+            $extremeValues = [];
+
+            foreach ($parameters as $dimensionKey => $ametParam) {
+                try {
+                    $endpoint = "/api/valores/climatologicos/valoresextremos/parametro/{$ametParam}/estacion/{$stationId}";
+                    $data = $this->makeRequest($endpoint);
+
+                    if (! empty($data)) {
+                        // Add the dimension key to the response for easy identification
+                        $data['dimension'] = $dimensionKey;
+                        $extremeValues[$dimensionKey] = $data;
+                    }
+                } catch (\RuntimeException $e) {
+                    $errorMessage = $e->getMessage();
+                    $errorType = 'unknown';
+                    if (str_contains(strtolower($errorMessage), 'rate limit')) {
+                        $errorType = 'rate_limit';
+                    } elseif (str_contains(strtolower($errorMessage), 'retry')) {
+                        $errorType = 'retry';
+                    } elseif (str_contains(strtolower($errorMessage), 'server error')) {
+                        $errorType = 'server_error';
+                    }
+                    Log::warning("Error fetching extreme values parameter ({$errorType})", [
+                        'stationId' => $stationId,
+                        'parameter' => $ametParam,
+                        'dimension' => $dimensionKey,
+                        'error' => $errorMessage,
+                    ]);
+                    // Continue with other parameters even if one fails
+                }
+            }
+
+            return $extremeValues;
+        });
+    }
+
+    /**
      * Get monthly/annual climate data for a specific station and year range.
      *
      * AEMET API has a 36-month (3-year) maximum range limitation.

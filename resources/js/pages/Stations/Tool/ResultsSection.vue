@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ChartByDimension from '@/components/ChartByDimension.vue';
+import ExtremeValuesTable from '@/components/ExtremeValuesTable.vue';
 import InfoDrawer from '@/components/InfoDrawer.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -52,6 +53,10 @@ const isDailyQuery = computed(
 
 const isMonthlyYearlyQuery = computed(
     () => props.results?.queryType === 'monthly-yearly-trends',
+);
+
+const isExtremeValuesQuery = computed(
+    () => props.results?.queryType === 'extreme-values',
 );
 
 const tickFormatter = computed(() => (value: number) => {
@@ -205,6 +210,74 @@ const chartSlides = computed(() => {
             description: baseTitles[dimension].description,
         };
     });
+});
+
+const extremeSlides = computed(() => {
+    const observations = props.results?.observations ?? [];
+    const availableDimensions = new Set(
+        observations.map((record) => record.dimension),
+    );
+
+    const slides = [
+        {
+            key: 'temperature-max' as const,
+            dimension: 'temperature' as const,
+            metric: 'temperature-max' as const,
+            title: 'Höchste Temperatur',
+            description: 'Absoluter Höchstwert pro Station',
+        },
+        {
+            key: 'temperature-min' as const,
+            dimension: 'temperature' as const,
+            metric: 'temperature-min' as const,
+            title: 'Tiefste Temperatur',
+            description: 'Absoluter Tiefstwert pro Station',
+        },
+        {
+            key: 'temperature-avg-high' as const,
+            dimension: 'temperature' as const,
+            metric: 'temperature-avg-high' as const,
+            title: 'Durchschnitt Hoch',
+            description: 'Mittlere Höchsttemperatur im wärmsten Monat',
+        },
+        {
+            key: 'temperature-avg-low' as const,
+            dimension: 'temperature' as const,
+            metric: 'temperature-avg-low' as const,
+            title: 'Durchschnitt Tief',
+            description: 'Mittlere Tiefsttemperatur im kältesten Monat',
+        },
+        {
+            key: 'precipitation-max-day' as const,
+            dimension: 'precipitation' as const,
+            metric: 'precipitation-max-day' as const,
+            title: 'Max. Tagesniederschlag',
+            description: 'Höchster Tageswert je Station',
+        },
+        {
+            key: 'precipitation-max-month' as const,
+            dimension: 'precipitation' as const,
+            metric: 'precipitation-max-month' as const,
+            title: 'Max. Monatsniederschlag',
+            description: 'Höchster Monatswert je Station',
+        },
+        {
+            key: 'precipitation-min-month' as const,
+            dimension: 'precipitation' as const,
+            metric: 'precipitation-min-month' as const,
+            title: 'Min. Monatsniederschlag',
+            description: 'Niedrigster Monatswert je Station',
+        },
+        {
+            key: 'wind-max-gust' as const,
+            dimension: 'wind' as const,
+            metric: 'wind-max-gust' as const,
+            title: 'Stärkste Böe',
+            description: 'Maximale Windböe je Station',
+        },
+    ];
+
+    return slides.filter((slide) => availableDimensions.has(slide.dimension));
 });
 
 const getAdjectiveForDimension = (dimension: DimensionKey): string => {
@@ -472,7 +545,86 @@ const handleCarouselInit = (api: CarouselApi) => {
             </div>
 
             <div class="flex-1 overflow-visible">
-                <div v-if="stationsWithData.length > 0" class="h-full w-full">
+                <!-- Extreme Values Carousel Display -->
+                <div
+                    v-if="
+                        isExtremeValuesQuery &&
+                        stationsWithData.length > 0 &&
+                        extremeSlides.length > 0
+                    "
+                    class="h-full w-full"
+                >
+                    <Carousel
+                        class="w-full"
+                        :style="carouselHeightStyle"
+                        :opts="{ align: 'start', loop: true }"
+                        @init-api="handleCarouselInit"
+                    >
+                        <div class="relative h-full" :class="chartPaddingClass">
+                            <CarouselContent class="h-full gap-4 sm:gap-6">
+                                <CarouselItem
+                                    v-for="slide in extremeSlides"
+                                    :key="slide.key"
+                                    class="h-full basis-full"
+                                >
+                                    <Card class="flex h-full w-full flex-col">
+                                        <CardHeader
+                                            class="flex-shrink-0 p-3 pb-2 sm:p-6 sm:pb-3"
+                                        >
+                                            <CardTitle
+                                                class="text-lg sm:text-xl"
+                                            >
+                                                {{ slide.title }}
+                                            </CardTitle>
+                                            <CardDescription
+                                                class="hidden text-sm text-slate-600 sm:block dark:text-slate-400"
+                                            >
+                                                {{ slide.description }}
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent
+                                            class="flex min-h-0 flex-1 flex-col p-3 pt-1 sm:p-6 sm:pt-3"
+                                        >
+                                            <ExtremeValuesTable
+                                                :extreme-values="
+                                                    props.results.observations
+                                                "
+                                                :station-details="
+                                                    props.results.stations
+                                                "
+                                                :dimensions="[slide.dimension]"
+                                                :metric="slide.metric"
+                                            />
+                                        </CardContent>
+                                    </Card>
+                                </CarouselItem>
+                            </CarouselContent>
+
+                            <CarouselPrevious
+                                v-if="showSideArrows"
+                                class="top-1/2 left-3 z-10 -translate-y-1/2 sm:left-5"
+                            />
+                            <CarouselNext
+                                v-if="showSideArrows"
+                                class="top-1/2 right-3 z-10 -translate-y-1/2 sm:right-5"
+                            />
+                        </div>
+
+                        <div
+                            v-if="showBottomButtons"
+                            class="mt-8 flex justify-center gap-3 pb-2"
+                        >
+                            <CarouselPrevious class="static h-10 w-10" />
+                            <CarouselNext class="static h-10 w-10" />
+                        </div>
+                    </Carousel>
+                </div>
+
+                <!-- Standard Chart Carousel Display -->
+                <div
+                    v-else-if="stationsWithData.length > 0"
+                    class="h-full w-full"
+                >
                     <Carousel
                         class="w-full"
                         :style="carouselHeightStyle"

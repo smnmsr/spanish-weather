@@ -250,6 +250,58 @@ class StationController
             ]);
         }
 
+        if ($type === 'extreme-values') {
+            $allStations = $this->aemet->getAllStations();
+            $stationDetails = [];
+
+            foreach ($allStations as $station) {
+                $stationId = $station['idema'] ?? $station['indicativo'] ?? null;
+
+                if ($stationId && in_array($stationId, $stationIds)) {
+                    $stationDetails[$stationId] = [
+                        'id' => $stationId,
+                        'name' => $station['nombre'] ?? $station['ub'] ?? 'Unbekannt',
+                        'provincia' => $station['provincia'] ?? null,
+                    ];
+                }
+            }
+
+            $extremeValuesData = [];
+
+            try {
+                foreach ($stationIds as $stationId) {
+                    $data = $this->aemet->getExtremeValues($stationId);
+
+                    // Flatten the aggregated response structure into a normalized array
+                    // Each record includes the dimension key and station ID
+                    foreach ($data as $dimensionKey => $extremeRecord) {
+                        $normalized = array_merge($extremeRecord, [
+                            'idema' => $extremeRecord['indicativo'] ?? $stationId,
+                            'dimension' => $dimensionKey,
+                        ]);
+                        $extremeValuesData[] = $normalized;
+                    }
+                }
+            } catch (\RuntimeException $e) {
+                Log::error('Error fetching extreme values data', [
+                    'message' => $e->getMessage(),
+                    'stationIds' => $stationIds,
+                ]);
+
+                return response()->json([
+                    'error' => 'AEMET API is currently unavailable. Please try again in a few minutes.',
+                    'type' => 'api_outage',
+                ], 503);
+            }
+
+            return response()->json([
+                'queryType' => $type,
+                'observations' => $extremeValuesData,
+                'stations' => $stationDetails,
+                'selectedStationIds' => $stationIds,
+            ]);
+        }
+
         // TODO: Handle other query types
         return response()->json([
             'error' => 'Dieser Datentyp wird noch nicht unterstützt.',

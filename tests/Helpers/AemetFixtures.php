@@ -494,6 +494,105 @@ class AemetFixtures
     }
 
     /**
+     * Get mock extreme values data for a specific station and parameter.
+     * Represents responses from /api/valores/climatologicos/valoresextremos/parametro/{parametro}/estacion/{idema}
+     */
+    public static function extremeValues(string $stationId, string $parameter): array
+    {
+        $stationNames = [
+            '3195' => 'MADRID RETIRO',
+            '0201D' => 'BARCELONA AEROPUERTO',
+            '5783' => 'VALENCIA',
+            '5960' => 'SEVILLA AEROPUERTO',
+            '1387' => 'BILBAO AEROPUERTO',
+        ];
+
+        $ubicaciones = [
+            '3195' => 'MADRID',
+            '0201D' => 'BARCELONA',
+            '5783' => 'VALENCIA',
+            '5960' => 'SEVILLA',
+            '1387' => 'VIZCAYA',
+        ];
+
+        $name = $stationNames[$stationId] ?? 'TEST STATION';
+        $ubicacion = $ubicaciones[$stationId] ?? 'TEST';
+
+        if ($parameter === 'T') {
+            // Temperature extremes
+            return [
+                'indicativo' => $stationId,
+                'nombre' => $name,
+                'ubicacion' => $ubicacion,
+                'codigo' => '023000',
+                'temMin' => ['-120', '-140', '-95', '-62', '-41', '-12', '28', '35', '-8', '-45', '-82', '-135', '-140'],
+                'diaMin' => ['15', '8', '12', '5', '3', '8', '15', '20', '18', '25', '22', '10', '8'],
+                'anioMin' => ['1985', '1956', '2005', '1986', '1991', '1997', '1993', '1965', '1972', '1974', '1969', '1970', '1956'],
+                'mesMin' => '2',
+                'temMax' => ['210', '220', '240', '285', '320', '385', '420', '415', '360', '295', '245', '215', '420'],
+                'diaMax' => ['20', '15', '28', '12', '25', '28', '15', '8', '5', '1', '8', '18', '15'],
+                'anioMax' => ['2020', '2019', '2015', '2011', '2017', '2019', '2022', '2003', '2016', '2023', '2020', '2019', '2022'],
+                'mesMax' => '7',
+                'temMedBaja' => ['10', '-15', '25', '50', '85', '145', '185', '195', '155', '95', '45', '18', '-15'],
+                'anioMedBaja' => ['1972', '1956', '1971', '1986', '1984', '1992', '1977', '1977', '1969', '1993', '1966', '1960', '1956'],
+                'mesMedBaja' => '2',
+                'temMedAlta' => ['85', '105', '135', '165', '205', '265', '315', '305', '245', '190', '135', '95', '315'],
+                'anioMedAlta' => ['2020', '2019', '2017', '2011', '2022', '2019', '2022', '2003', '2016', '2023', '2020', '2019', '2022'],
+                'mesMedAlta' => '7',
+                'temMedMin' => ['-15', '-55', '-8', '12', '42', '98', '135', '145', '105', '52', '12', '-8', '-55'],
+                'anioMedMin' => ['1985', '1956', '1971', '1986', '1984', '1992', '1977', '1977', '1994', '1974', '1966', '1963', '1956'],
+                'mesMedMin' => '2',
+                'temMedMax' => ['125', '155', '185', '220', '265', '325', '385', '375', '305', '245', '185', '135', '385'],
+                'anioMedMax' => ['1983', '1949', '1997', '1949', '2022', '2019', '2022', '2003', '1985', '2017', '1948', '2018', '2022'],
+                'mesMedMax' => '7',
+            ];
+        } elseif ($parameter === 'P') {
+            // Precipitation extremes
+            return [
+                'indicativo' => $stationId,
+                'nombre' => $name,
+                'ubicacion' => $ubicacion,
+                'codigo' => '033100',
+                'maxDiasMesPrec' => ['18', '22', '16', '19', '20', '15', '8', '10', '12', '16', '18', '20', '22'],
+                'anioMaxDiasMesPrec' => ['1996', '1947', '2018', '1946', '2018', '1988', '1977', '1983', '2014', '1992', '1983', '1996', '1947'],
+                'mesMaxDiasMesPrec' => '2',
+                'maxDiasMesNieve' => ['5', '8', '4', '2', '0', '0', '0', '0', '0', '1', '3', '6', '8'],
+                'anioMaxDiasMesNieve' => ['1985', '1963', '2018', '2000', '2024', '2024', '2024', '2024', '2024', '1966', '1966', '1985', '1963'],
+                'mesMaxDiasMesNieve' => '2',
+                'maxDiasMesTormenta' => ['1', '1', '2', '6', '8', '12', '10', '11', '8', '3', '2', '1', '12'],
+                'anioMaxDiasMesTormenta' => ['1966', '2007', '1972', '2007', '2018', '1976', '1997', '2003', '1979', '1986', '2001', '1983', '1976'],
+                'mesMaxDiasMesTormenta' => '6',
+                'precMaxDia' => ['985', '1120', '890', '760', '620', '510', '450', '580', '850', '920', '980', '1050', '1120'],
+                'diaMaxDia' => ['18', '10', '15', '22', '6', '5', '3', '25', '26', '18', '5', '3', '10'],
+                'anioMaxDia' => ['1996', '2017', '2014', '1951', '1969', '1953', '1988', '2017', '1961', '2020', '1966', '1958', '2017'],
+                'mesMaxDia' => '2',
+                'precMaxMen' => ['3850', '3120', '4200', '2980', '2650', '1920', '850', '980', '1850', '3850', '3920', '3580', '4200'],
+                'anioMaxMen' => ['1996', '1972', '2018', '2000', '1971', '1988', '1977', '2017', '1965', '1972', '1984', '1958', '2018'],
+                'mesMaxMen' => '3',
+                'precMinMen' => ['85', '45', '0', '120', '42', '8', '0', '0', '9', '65', '0', '110', '0'],
+                'anioMinMes' => ['1983', '1990', '1997', '2023', '2019', '1986', '2005', '1991', '2011', '1985', '1948', '1988', '1948'],
+                'mesMinMen' => '11',
+            ];
+        } elseif ($parameter === 'V') {
+            // Wind extremes
+            return [
+                'indicativo' => $stationId,
+                'nombre' => $name,
+                'ubicacion' => $ubicacion,
+                'codigo' => '011705',
+                'mes' => '2',
+                'rachMax' => ['95', '110', '102', '98', '88', '105', '92', '95', '98', '115', '108', '120', '120'],
+                'dirRachMax' => ['270', '250', '180', '290', '240', '260', '280', '230', '220', '160', '190', '240', '240'],
+                'hora' => ['10-30', '16-20', '11-45', '06-15', '01-50', '13-30', '17-10', '09-25', '19-40', '21-00', '16-15', '03-45', '03-45'],
+                'dia' => ['22', '20', '7', '12', '14', '12', '19', '25', '10', '18', '5', '14', '14'],
+                'anio' => ['2009', '1989', '2018', '1989', '1994', '1992', '1989', '2017', '2022', '2020', '1982', '1989', '1989'],
+            ];
+        }
+
+        return [];
+    }
+
+    /**
      * Get HTTP fake configuration for AEMET API.
      * This includes both the metadata and data URL responses following AEMET's two-step pattern.
      */
@@ -526,6 +625,72 @@ class AemetFixtures
             ]),
             // Monthly/annual climatological data - Step 2: Actual data
             '*/mock-monthly-data' => \Illuminate\Support\Facades\Http::response(self::monthlyAnnualData()),
+
+            // Extreme values - Temperature (T) per station
+            '*/api/valores/climatologicos/valoresextremos/parametro/T/estacion/3195' => \Illuminate\Support\Facades\Http::response([
+                'datos' => 'http://test.local/mock-extreme-temp-3195',
+                'estado' => 200,
+                'descripcion' => 'exito',
+            ]),
+            '*/mock-extreme-temp-3195' => \Illuminate\Support\Facades\Http::response(self::extremeValues('3195', 'T')),
+
+            '*/api/valores/climatologicos/valoresextremos/parametro/T/estacion/0201D' => \Illuminate\Support\Facades\Http::response([
+                'datos' => 'http://test.local/mock-extreme-temp-0201D',
+                'estado' => 200,
+                'descripcion' => 'exito',
+            ]),
+            '*/mock-extreme-temp-0201D' => \Illuminate\Support\Facades\Http::response(self::extremeValues('0201D', 'T')),
+
+            '*/api/valores/climatologicos/valoresextremos/parametro/T/estacion/5783' => \Illuminate\Support\Facades\Http::response([
+                'datos' => 'http://test.local/mock-extreme-temp-5783',
+                'estado' => 200,
+                'descripcion' => 'exito',
+            ]),
+            '*/mock-extreme-temp-5783' => \Illuminate\Support\Facades\Http::response(self::extremeValues('5783', 'T')),
+
+            // Extreme values - Precipitation (P) per station
+            '*/api/valores/climatologicos/valoresextremos/parametro/P/estacion/3195' => \Illuminate\Support\Facades\Http::response([
+                'datos' => 'http://test.local/mock-extreme-prec-3195',
+                'estado' => 200,
+                'descripcion' => 'exito',
+            ]),
+            '*/mock-extreme-prec-3195' => \Illuminate\Support\Facades\Http::response(self::extremeValues('3195', 'P')),
+
+            '*/api/valores/climatologicos/valoresextremos/parametro/P/estacion/0201D' => \Illuminate\Support\Facades\Http::response([
+                'datos' => 'http://test.local/mock-extreme-prec-0201D',
+                'estado' => 200,
+                'descripcion' => 'exito',
+            ]),
+            '*/mock-extreme-prec-0201D' => \Illuminate\Support\Facades\Http::response(self::extremeValues('0201D', 'P')),
+
+            '*/api/valores/climatologicos/valoresextremos/parametro/P/estacion/5783' => \Illuminate\Support\Facades\Http::response([
+                'datos' => 'http://test.local/mock-extreme-prec-5783',
+                'estado' => 200,
+                'descripcion' => 'exito',
+            ]),
+            '*/mock-extreme-prec-5783' => \Illuminate\Support\Facades\Http::response(self::extremeValues('5783', 'P')),
+
+            // Extreme values - Wind (V) per station
+            '*/api/valores/climatologicos/valoresextremos/parametro/V/estacion/3195' => \Illuminate\Support\Facades\Http::response([
+                'datos' => 'http://test.local/mock-extreme-wind-3195',
+                'estado' => 200,
+                'descripcion' => 'exito',
+            ]),
+            '*/mock-extreme-wind-3195' => \Illuminate\Support\Facades\Http::response(self::extremeValues('3195', 'V')),
+
+            '*/api/valores/climatologicos/valoresextremos/parametro/V/estacion/0201D' => \Illuminate\Support\Facades\Http::response([
+                'datos' => 'http://test.local/mock-extreme-wind-0201D',
+                'estado' => 200,
+                'descripcion' => 'exito',
+            ]),
+            '*/mock-extreme-wind-0201D' => \Illuminate\Support\Facades\Http::response(self::extremeValues('0201D', 'V')),
+
+            '*/api/valores/climatologicos/valoresextremos/parametro/V/estacion/5783' => \Illuminate\Support\Facades\Http::response([
+                'datos' => 'http://test.local/mock-extreme-wind-5783',
+                'estado' => 200,
+                'descripcion' => 'exito',
+            ]),
+            '*/mock-extreme-wind-5783' => \Illuminate\Support\Facades\Http::response(self::extremeValues('5783', 'V')),
         ];
     }
 }
