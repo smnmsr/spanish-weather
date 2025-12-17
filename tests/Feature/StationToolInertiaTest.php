@@ -1,8 +1,19 @@
 <?php
 
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Helpers\AemetFixtures;
 
-it('renders the station tool page', function () {
+// Set up HTTP mocks for all tests
+beforeEach(function () {
+    Http::fake(AemetFixtures::httpFakeConfig());
+});
+
+// ===========================
+// Inertia Page Rendering Tests
+// ===========================
+
+it('renders the station tool page with mocked data', function () {
     $response = $this->get(route('home'));
 
     $response->assertSuccessful();
@@ -12,7 +23,7 @@ it('renders the station tool page', function () {
         ->has('stations')
         ->has('selectedStations')
     );
-})->skipOnCi();
+});
 
 it('reads selected stations from query parameters', function () {
     $selectedStations = ['station1', 'station2', 'station3'];
@@ -26,7 +37,7 @@ it('reads selected stations from query parameters', function () {
         ->component('Stations/Tool')
         ->where('selectedStations', $selectedStations)
     );
-})->skipOnCi();
+});
 
 it('persists selected stations across requests via URL', function () {
     $selectedStations = ['station1', 'station2'];
@@ -40,7 +51,7 @@ it('persists selected stations across requests via URL', function () {
         ->component('Stations/Tool')
         ->where('selectedStations', $selectedStations)
     );
-})->skipOnCi();
+});
 
 it('handles empty station selection from query parameters', function () {
     $response = $this->get(route('home', ['stations' => '']));
@@ -51,4 +62,20 @@ it('handles empty station selection from query parameters', function () {
         ->component('Stations/Tool')
         ->where('selectedStations', [])
     );
-})->skipOnCi();
+});
+
+// ==========================
+// Map Page Rendering Tests
+// ==========================
+
+it('renders the stations map on the home page', function () {
+    $response = $this->get(route('home'));
+
+    $response->assertSuccessful();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Stations/Tool')
+        ->has('stations')
+        ->has('selectedStations')
+    );
+});
