@@ -1,5 +1,12 @@
 <?php
 
+use Illuminate\Support\Facades\Http;
+use Tests\Helpers\AemetFixtures;
+
+beforeEach(function () {
+    Http::fake(AemetFixtures::httpFakeConfig());
+});
+
 it('navigates from welcome to map section', function () {
     $page = visit('/');
 
