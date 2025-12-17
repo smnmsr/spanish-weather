@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import DateRangeSelector from '@/components/DateRangeSelector.vue';
+import ForecastLocationsSelector from '@/components/ForecastLocationsSelector.vue';
 import MonthYearSelector from '@/components/MonthYearSelector.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,6 +32,7 @@ import {
     Calendar,
     Clock,
     CloudOff,
+    CloudSun,
     TrendingUp,
 } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
@@ -41,6 +43,7 @@ const iconComponents: Record<string, any> = {
     'trending-up': TrendingUp,
     'alert-circle': AlertCircle,
     'bar-chart': BarChart,
+    'cloud-sun': CloudSun,
 };
 
 interface Props {
@@ -49,6 +52,13 @@ interface Props {
     isLoadingResults: boolean;
     dateRange: DateRangeSelection | null;
     monthYearRange: MonthYearRange | null;
+    municipalityIds: string[];
+    selectedStations?: Array<{
+        id: string;
+        latitude: number;
+        longitude: number;
+        nombre: string;
+    }>;
 }
 
 const props = defineProps<Props>();
@@ -60,6 +70,7 @@ const emit = defineEmits<{
     (e: 'update-date-range', range: DateRangeSelection): void;
     (e: 'apply-date-preset', preset: string): void;
     (e: 'update-month-year-range', range: MonthYearRange): void;
+    (e: 'update-municipality-ids', value: string[]): void;
 }>();
 
 const showOutageDrawer = ref(false);
@@ -80,6 +91,10 @@ const requiresDateRange = computed(() => {
 
 const requiresMonthYearRange = computed(() => {
     return props.selectedDataQuery === 'monthly-yearly-trends';
+});
+
+const isForecastSelected = computed(() => {
+    return props.selectedDataQuery === 'forecast';
 });
 
 // Intercept proceed emission to allow UI error handling based on fetch errors
@@ -220,12 +235,18 @@ onMounted(() => {
                     Welche Daten möchten Sie abfragen?
                 </h2>
                 <p class="text-slate-600 dark:text-slate-400">
-                    Wählen Sie die Art der Daten aus, die Sie für Ihre
-                    {{ selectedCount }} ausgewählte{{
-                        selectedCount !== 1 ? 'n' : ''
-                    }}
-                    Station{{ selectedCount !== 1 ? 'en' : '' }} abfragen
-                    möchten.
+                    <span v-if="isForecastSelected">
+                        Wählen Sie die Vorhersageart und geben Sie eine AEMET
+                        Municipio-ID ein (z.B. 28079 für Madrid).
+                    </span>
+                    <span v-else>
+                        Wählen Sie die Art der Daten aus, die Sie für Ihre
+                        {{ selectedCount }} ausgewählte{{
+                            selectedCount !== 1 ? 'n' : ''
+                        }}
+                        Station{{ selectedCount !== 1 ? 'en' : '' }} abfragen
+                        möchten.
+                    </span>
                 </p>
             </div>
 
@@ -330,6 +351,32 @@ onMounted(() => {
             />
 
             <div
+                v-if="isForecastSelected"
+                class="mt-6 space-y-2 rounded-lg border border-border bg-muted/30 p-4"
+            >
+                <div class="flex items-center justify-between">
+                    <p
+                        class="text-sm font-semibold text-slate-800 dark:text-slate-200"
+                    >
+                        Gemeinden für Vorhersage
+                    </p>
+                </div>
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                    Wähle bis zu 5 spanische Gemeinden für eine
+                    7-Tage-Wettervorhersage. Die nächstgelegenen Gemeinden zu
+                    deinen ausgewählten Stationen wurden automatisch
+                    vorausgewählt.
+                </p>
+                <ForecastLocationsSelector
+                    :model-value="props.municipalityIds"
+                    :selected-stations="props.selectedStations"
+                    @update:model-value="
+                        emit('update-municipality-ids', $event)
+                    "
+                />
+            </div>
+
+            <div
                 class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             >
                 <Button
@@ -345,6 +392,10 @@ onMounted(() => {
                     :disabled="
                         !props.selectedDataQuery ||
                         props.isLoadingResults ||
+                        (props.selectedDataQuery !== 'forecast' &&
+                            props.selectedCount === 0) ||
+                        (props.selectedDataQuery === 'forecast' &&
+                            props.municipalityIds.length === 0) ||
                         (requiresDateRange &&
                             (!props.dateRange?.startDate ||
                                 !props.dateRange?.endDate)) ||

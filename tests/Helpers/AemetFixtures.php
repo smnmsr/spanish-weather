@@ -593,6 +593,111 @@ class AemetFixtures
     }
 
     /**
+     * Get mock municipality data.
+     * Represents the response from /api/maestro/municipios
+     */
+    public static function municipalities(): array
+    {
+        return [
+            [
+                'id' => '28079',
+                'nombre' => 'Madrid',
+                'latitud_dec' => '40.4168',
+                'longitud_dec' => '-3.7038',
+                'provincia' => 'Madrid',
+                'altitud' => '667',
+                'cpro' => '28',
+                'cmun' => '079',
+            ],
+            [
+                'id' => '08019',
+                'nombre' => 'Barcelona',
+                'latitud_dec' => '41.3851',
+                'longitud_dec' => '2.1734',
+                'provincia' => 'Barcelona',
+                'altitud' => '12',
+                'cpro' => '08',
+                'cmun' => '019',
+            ],
+            [
+                'id' => '46250',
+                'nombre' => 'Valencia',
+                'latitud_dec' => '39.4699',
+                'longitud_dec' => '-0.3763',
+                'provincia' => 'Valencia',
+                'altitud' => '15',
+                'cpro' => '46',
+                'cmun' => '250',
+            ],
+            [
+                'id' => '41091',
+                'nombre' => 'Sevilla',
+                'latitud_dec' => '37.3891',
+                'longitud_dec' => '-5.9845',
+                'provincia' => 'Sevilla',
+                'altitud' => '34',
+                'cpro' => '41',
+                'cmun' => '091',
+            ],
+            [
+                'id' => '48020',
+                'nombre' => 'Bilbao',
+                'latitud_dec' => '43.2627',
+                'longitud_dec' => '-2.9253',
+                'provincia' => 'Bizkaia',
+                'altitud' => '19',
+                'cpro' => '48',
+                'cmun' => '020',
+            ],
+        ];
+    }
+
+    /**
+     * Get mock 7-day forecast data for a municipality.
+     * Represents the response from /api/prediccion/especifica/municipio/diaria/{municipalityId}
+     */
+    public static function municipalityForecast(string $municipalityId = '28079'): array
+    {
+        $municipalityNames = [
+            '28079' => ['nombre' => 'Madrid', 'provincia' => 'Madrid'],
+            '08019' => ['nombre' => 'Barcelona', 'provincia' => 'Barcelona'],
+            '46250' => ['nombre' => 'Valencia', 'provincia' => 'Valencia'],
+        ];
+
+        $municipalityInfo = $municipalityNames[$municipalityId] ?? ['nombre' => 'Madrid', 'provincia' => 'Madrid'];
+
+        // Generate 7 days of forecast data starting from today
+        $days = [];
+        for ($i = 0; $i < 7; $i++) {
+            $date = date('Y-m-d', strtotime("+{$i} days")).'T00:00:00';
+            $days[] = [
+                'fecha' => $date,
+                'temperatura' => ['maxima' => 15 + $i, 'minima' => 8 + ($i % 3)],
+                'humedadRelativa' => ['maxima' => 75 - ($i * 2), 'minima' => 55 - ($i % 4)],
+                'viento' => [['direccion' => ['O', 'NO', 'N', 'NE', 'E', 'SE', 'S'][$i], 'velocidad' => 10 + $i]],
+                'probPrecipitacion' => [['value' => 20 + ($i * 5)]],
+            ];
+        }
+
+        return [
+            [
+                'origen' => [
+                    'productor' => 'Agencia Estatal de Meteorología - AEMET. Gobierno de España',
+                    'web' => 'https://www.aemet.es',
+                ],
+                'elaborado' => date('Y-m-d').'T13:00:00',
+                'nombre' => $municipalityInfo['nombre'],
+                'provincia' => $municipalityInfo['provincia'],
+                'prediccion' => [
+                    'dia' => $days,
+                ],
+                'id' => (int) $municipalityId,
+                'version' => 1,
+            ],
+        ];
+    }
+
+    /**
      * Get HTTP fake configuration for AEMET API.
      * This includes both the metadata and data URL responses following AEMET's two-step pattern.
      */
@@ -607,6 +712,15 @@ class AemetFixtures
             ]),
             // Station inventory - Step 2: Actual data
             '*/mock-stations-data' => \Illuminate\Support\Facades\Http::response(self::stations()),
+
+            // Municipalities - Step 1: Metadata with datos URL
+            '*/api/maestro/municipios' => \Illuminate\Support\Facades\Http::response([
+                'datos' => 'http://test.local/mock-municipalities-data',
+                'estado' => 200,
+                'descripcion' => 'exito',
+            ]),
+            // Municipalities - Step 2: Actual data
+            '*/mock-municipalities-data' => \Illuminate\Support\Facades\Http::response(self::municipalities()),
 
             // Recent observations - Step 1: Metadata with datos URL
             '*/api/observacion/convencional/todas' => \Illuminate\Support\Facades\Http::response([
@@ -691,6 +805,28 @@ class AemetFixtures
                 'descripcion' => 'exito',
             ]),
             '*/mock-extreme-wind-5783' => \Illuminate\Support\Facades\Http::response(self::extremeValues('5783', 'V')),
+
+            // Municipality forecast - 7 day forecast per municipality
+            '*/api/prediccion/especifica/municipio/diaria/28079' => \Illuminate\Support\Facades\Http::response([
+                'datos' => 'http://test.local/mock-forecast-28079',
+                'estado' => 200,
+                'descripcion' => 'exito',
+            ]),
+            '*/mock-forecast-28079' => \Illuminate\Support\Facades\Http::response(self::municipalityForecast('28079')),
+
+            '*/api/prediccion/especifica/municipio/diaria/08019' => \Illuminate\Support\Facades\Http::response([
+                'datos' => 'http://test.local/mock-forecast-08019',
+                'estado' => 200,
+                'descripcion' => 'exito',
+            ]),
+            '*/mock-forecast-08019' => \Illuminate\Support\Facades\Http::response(self::municipalityForecast('08019')),
+
+            '*/api/prediccion/especifica/municipio/diaria/46250' => \Illuminate\Support\Facades\Http::response([
+                'datos' => 'http://test.local/mock-forecast-46250',
+                'estado' => 200,
+                'descripcion' => 'exito',
+            ]),
+            '*/mock-forecast-46250' => \Illuminate\Support\Facades\Http::response(self::municipalityForecast('46250')),
         ];
     }
 }

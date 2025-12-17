@@ -21,6 +21,17 @@ export interface ChartDataPoint {
     sunshine?: number | null;
 }
 
+export interface Municipality {
+    id: string;
+    nombre: string; // Municipality name
+    latitud_dec?: string; // Decimal latitude
+    longitud_dec?: string; // Decimal longitude
+    provincia?: string; // Province name
+    altitud?: string; // Altitude
+    cpro?: string; // Province code
+    cmun?: string; // Municipality code
+}
+
 export const DimensionLabels: Record<DimensionKey, string> = {
     temperature: 'Temperatur',
     precipitation: 'Niederschlag',

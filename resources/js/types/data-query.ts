@@ -3,7 +3,8 @@ export type DataQueryType =
     | 'daily-values'
     | 'monthly-yearly-trends'
     | 'extreme-values'
-    | 'climatological-normals';
+    | 'climatological-normals'
+    | 'forecast';
 
 export interface DataQueryOption {
     type: DataQueryType;
@@ -34,6 +35,7 @@ export interface MonthYearRange {
 export interface DataQueryRequest {
     type: DataQueryType;
     stationIds: string[];
+    municipalityId?: string;
     dateRange?: DateRangeSelection;
     yearRange?: YearRangeSelection;
     monthYearRange?: MonthYearRange;
@@ -87,6 +89,16 @@ export const DATA_QUERY_OPTIONS: DataQueryOption[] = [
         description:
             'Standardisierte klimatologische Normalwerte für den Zeitraum 1991-2020',
         icon: 'bar-chart',
+        quickWin: true,
+        requiresDateRange: false,
+        estimatedTime: '< 1 Min',
+    },
+    {
+        type: 'forecast',
+        title: 'Vorhersage (7 Tage)',
+        description:
+            '7-Tage-Prognose für einen ausgewählten Ort (AEMET Municipio-ID)',
+        icon: 'cloud-sun',
         quickWin: true,
         requiresDateRange: false,
         estimatedTime: '< 1 Min',

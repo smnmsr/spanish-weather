@@ -108,6 +108,117 @@ class AemetService
     }
 
     /**
+     * Get all municipalities from AEMET.
+     */
+    public function getAllMunicipalities(): array
+    {
+        $cacheKey = 'aemet_municipalities_all';
+        $cacheTtl = config('aemet.cache_ttl.stations'); // 24 hours, rarely changes
+
+        return Cache::remember($cacheKey, $cacheTtl, function () {
+            $endpoint = '/api/maestro/municipios';
+
+            return $this->makeRequest($endpoint);
+        });
+    }
+
+    /**
+     * Get municipalities grouped by province with province names.
+     * Adds province name based on id_old (province code).
+     */
+    public function getMunicipalitiesByProvince(): array
+    {
+        $municipalities = $this->getAllMunicipalities();
+
+        // Spanish province code to name mapping
+        $provinceCodes = [
+            '01' => 'Álava',
+            '02' => 'Albacete',
+            '03' => 'Alicante',
+            '04' => 'Almería',
+            '05' => 'Ávila',
+            '06' => 'Badajoz',
+            '07' => 'Baleares',
+            '08' => 'Barcelona',
+            '09' => 'Burgos',
+            '10' => 'Cáceres',
+            '11' => 'Cádiz',
+            '12' => 'Castellón',
+            '13' => 'Ciudad Real',
+            '14' => 'Córdoba',
+            '15' => 'Coruña',
+            '16' => 'Cuenca',
+            '17' => 'Gerona',
+            '18' => 'Granada',
+            '19' => 'Guadalajara',
+            '20' => 'Guipúzcoa',
+            '21' => 'Huelva',
+            '22' => 'Huesca',
+            '23' => 'Jaén',
+            '24' => 'León',
+            '25' => 'Lérida',
+            '26' => 'La Rioja',
+            '27' => 'Lugo',
+            '28' => 'Madrid',
+            '29' => 'Málaga',
+            '30' => 'Murcia',
+            '31' => 'Navarra',
+            '32' => 'Orense',
+            '33' => 'Asturias',
+            '34' => 'Palencia',
+            '35' => 'Palmas (Las)',
+            '36' => 'Pontevedra',
+            '37' => 'Salamanca',
+            '38' => 'Santa Cruz de Tenerife',
+            '39' => 'Cantabria',
+            '40' => 'Segovia',
+            '41' => 'Sevilla',
+            '42' => 'Soria',
+            '43' => 'Tarragona',
+            '44' => 'Teruel',
+            '45' => 'Toledo',
+            '46' => 'Valencia',
+            '47' => 'Valladolid',
+            '48' => 'Vizcaya',
+            '49' => 'Zamora',
+            '50' => 'Zaragoza',
+            '51' => 'Ceuta',
+            '52' => 'Melilla',
+        ];
+
+        // Add province field and strip 'id' prefix from each municipality
+        // AEMET returns IDs like 'id52001' but all forecast endpoints expect plain codes '52001'
+        $withProvince = array_map(function ($m) use ($provinceCodes) {
+            $code = substr($m['id_old'] ?? $m['id'] ?? '00', 0, 2);
+            $m['provincia'] = $provinceCodes[$code] ?? 'Desconocida';
+
+            // Strip 'id' prefix from the ID field since no AEMET endpoint uses this format
+            if (isset($m['id']) && str_starts_with($m['id'], 'id')) {
+                $m['id'] = substr($m['id'], 2);
+            }
+
+            return $m;
+        }, $municipalities);
+
+        return $withProvince;
+    }
+
+    /**
+     * Get 7-day daily forecast for a municipality (AEMET municipio ID).
+     */
+    public function getMunicipalityDailyForecast(string $municipalityId): array
+    {
+        $cacheKey = "aemet_forecast_municipality_{$municipalityId}";
+        $cacheTtl = config('aemet.cache_ttl.recent_data');
+
+        return Cache::remember($cacheKey, $cacheTtl, function () use ($municipalityId) {
+            $endpoint = "/api/prediccion/especifica/municipio/diaria/{$municipalityId}";
+
+            return $this->makeRequest($endpoint);
+        });
+    }
+
+    /**
      * Get extreme values (records) for a specific station.
      * Aggregates temperature (T), precipitation (P), and wind (V) parameters into a single response.
      *

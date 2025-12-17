@@ -41,6 +41,7 @@ const selectedIds = ref<Set<string>>(new Set(props.selectedStations));
 const selectedDataQuery = ref<DataQueryType | null>(null);
 const selectedDateRange = ref<DateRangeSelection | null>(null);
 const selectedMonthYearRange = ref<MonthYearRange | null>(null);
+const selectedMunicipalityIds = ref<string[]>([]);
 const queryResults = ref<any>(null);
 const isLoadingResults = ref(false);
 const resultsSectionRef = ref<HTMLElement | null>(null);
@@ -48,10 +49,32 @@ let scrollTimeout: number | null = null;
 
 const selectedCount = computed(() => selectedIds.value.size);
 
+const selectedStationsWithCoords = computed(() => {
+    return Array.from(selectedIds.value)
+        .map((id) => {
+            const station = props.stations.find((s) => s.id === id);
+            if (!station) return null;
+            return {
+                id: station.id ?? '',
+                latitude:
+                    typeof station.lat === 'number'
+                        ? station.lat
+                        : parseFloat(station.lat),
+                longitude:
+                    typeof station.lon === 'number'
+                        ? station.lon
+                        : parseFloat(station.lon),
+                nombre: station.name,
+            };
+        })
+        .filter((s) => s !== null);
+});
+
 const groupedObservations = computed(() => {
     if (!queryResults.value?.observations) return {};
 
     const isDaily = queryResults.value.queryType === 'daily-values';
+    const isForecast = queryResults.value.queryType === 'forecast';
     const grouped: Record<string, any[]> = {};
 
     queryResults.value.observations.forEach((obs: any) => {
@@ -64,8 +87,8 @@ const groupedObservations = computed(() => {
 
     Object.keys(grouped).forEach((stationId) => {
         grouped[stationId].sort((a, b) => {
-            const timeA = isDaily ? a.fecha || '' : a.fint || '';
-            const timeB = isDaily ? b.fecha || '' : b.fint || '';
+            const timeA = isDaily || isForecast ? a.fecha || '' : a.fint || '';
+            const timeB = isDaily || isForecast ? b.fecha || '' : b.fint || '';
             return timeB.localeCompare(timeA);
         });
     });
@@ -87,6 +110,8 @@ const queryTypeTitle = computed(() => {
             return 'Extremwerte';
         case 'climatological-normals':
             return 'Klimanormale (1991-2020)';
+        case 'forecast':
+            return 'Vorhersage (7 Tage)';
         default:
             return 'Datenabfrage';
     }
@@ -116,13 +141,20 @@ const chartDataByStation = computed(() => {
         queryResults.value?.queryType === 'monthly-yearly-trends';
     const isNormals =
         queryResults.value?.queryType === 'climatological-normals';
+    const isForecast = queryResults.value?.queryType === 'forecast';
 
     Object.keys(groupedObservations.value).forEach((stationId) => {
         const observations = groupedObservations.value[stationId];
 
         const sorted = [...observations].sort((a, b) => {
-            const timeA = isDaily || isNormals ? a.fecha || '' : a.fint || '';
-            const timeB = isDaily || isNormals ? b.fecha || '' : b.fint || '';
+            const timeA =
+                isDaily || isNormals || isForecast
+                    ? a.fecha || ''
+                    : a.fint || '';
+            const timeB =
+                isDaily || isNormals || isForecast
+                    ? b.fecha || ''
+                    : b.fint || '';
             return timeA.localeCompare(timeB);
         });
 
@@ -136,6 +168,9 @@ const chartDataByStation = computed(() => {
                 timeValue = obs.fecha ? `${obs.fecha}-01` : undefined;
             } else if (isNormals) {
                 // Normals use canonical YYYY-MM-DD built in controller
+                timeValue = obs.fecha;
+            } else if (isForecast) {
+                // Forecast data format: YYYY-MM-DDTHH:MM:SS
                 timeValue = obs.fecha;
             } else {
                 timeValue = obs.fint; // Hourly observation format: YYYY-MM-DDTHH:MM:SS
@@ -209,6 +244,22 @@ const chartDataByStation = computed(() => {
                     humidityMin: null,
                     precipitation: parseValue(obs.p_mes_md ?? obs.p_mes),
                     wind: null,
+                    sunshine: null,
+                };
+            } else if (isForecast) {
+                // Municipal daily forecast (7 days)
+                return {
+                    time: date.getTime(),
+                    temperature: parseValue(
+                        obs.tempAvg ?? obs.tempMax ?? obs.tempMin,
+                    ),
+                    temperatureMax: parseValue(obs.tempMax),
+                    temperatureMin: parseValue(obs.tempMin),
+                    humidity: parseValue(obs.humidityAvg),
+                    humidityMax: null,
+                    humidityMin: null,
+                    precipitation: parseValue(obs.precipitationProb),
+                    wind: parseValue(obs.windSpeedAvg),
                     sunshine: null,
                 };
             } else {
@@ -340,8 +391,8 @@ const isStepDisabled = computed(() => (stepNumber: number) => {
     // Step 1 (welcome) and 2 (map) are always enabled
     if (stepNumber <= 2) return false;
 
-    // Step 3 (data-options) requires at least one station selected
-    if (stepNumber === 3) return selectedCount.value === 0;
+    // Step 3 (data-options) stays accessible to allow forecast without station selection
+    if (stepNumber === 3) return false;
 
     // Step 4 (results) requires query results
     if (stepNumber === 4) return !queryResults.value;
@@ -414,6 +465,18 @@ function updateUrlStep(step: 'welcome' | 'map' | 'data-options' | 'results') {
         url.searchParams.delete('endYear');
     }
 
+    if (
+        selectedDataQuery.value === 'forecast' &&
+        selectedMunicipalityIds.value.length > 0
+    ) {
+        url.searchParams.set(
+            'municipalities',
+            selectedMunicipalityIds.value.join(','),
+        );
+    } else {
+        url.searchParams.delete('municipalities');
+    }
+
     window.history.replaceState({}, '', url.toString());
     currentStep.value = step;
 }
@@ -469,6 +532,18 @@ function updateUrlSelectionAndAnalysis() {
         url.searchParams.delete('endYear');
     }
 
+    if (
+        selectedDataQuery.value === 'forecast' &&
+        selectedMunicipalityIds.value.length > 0
+    ) {
+        url.searchParams.set(
+            'municipalities',
+            selectedMunicipalityIds.value.join(','),
+        );
+    } else {
+        url.searchParams.delete('municipalities');
+    }
+
     window.history.replaceState({}, '', url.toString());
 }
 
@@ -483,8 +558,11 @@ function handleScroll() {
 
         if (!mapSection) return;
 
-        // Check data options section first (bottom) - only if stations are selected
-        if (dataOptionsSection && selectedCount.value > 0) {
+        // Check data options section first (bottom) - only if stations are selected or forecast is active
+        if (
+            dataOptionsSection &&
+            (selectedCount.value > 0 || selectedDataQuery.value === 'forecast')
+        ) {
             const dataRect = dataOptionsSection.getBoundingClientRect();
             const isDataVisible =
                 dataRect.top < window.innerHeight && dataRect.bottom > 0;
@@ -519,6 +597,11 @@ function updateDateRange(range: DateRangeSelection) {
 
 function updateMonthYearRange(range: MonthYearRange) {
     selectedMonthYearRange.value = range;
+    updateUrlSelectionAndAnalysis();
+}
+
+function updateMunicipalityIds(ids: string[]) {
+    selectedMunicipalityIds.value = ids;
     updateUrlSelectionAndAnalysis();
 }
 
@@ -566,6 +649,10 @@ function selectDataQuery(queryType: DataQueryType) {
         selectedMonthYearRange.value = null;
     }
 
+    if (queryType !== 'forecast') {
+        selectedMunicipalityIds.value = [];
+    }
+
     updateUrlSelectionAndAnalysis();
 }
 
@@ -599,6 +686,16 @@ function toggleStation(stationId: string) {
 
 async function proceedWithDataQuery() {
     if (!selectedDataQuery.value) {
+        return;
+    }
+
+    const isForecastQuery = selectedDataQuery.value === 'forecast';
+
+    if (!isForecastQuery && selectedIds.value.size === 0) {
+        return;
+    }
+
+    if (isForecastQuery && selectedMunicipalityIds.value.length === 0) {
         return;
     }
 
@@ -638,7 +735,12 @@ async function proceedWithDataQuery() {
             },
             body: JSON.stringify({
                 type: selectedDataQuery.value,
-                stationIds: Array.from(selectedIds.value),
+                stationIds: isForecastQuery
+                    ? []
+                    : Array.from(selectedIds.value),
+                municipalityIds: isForecastQuery
+                    ? selectedMunicipalityIds.value
+                    : undefined,
                 dateRange: selectedDateRange.value ?? undefined,
                 monthYearRange: selectedMonthYearRange.value ?? undefined,
             }),
@@ -686,6 +788,7 @@ function resetSelection() {
     selectedDataQuery.value = null;
     selectedDateRange.value = null;
     selectedMonthYearRange.value = null;
+    selectedMunicipalityIds.value = [];
     updateUrlSelectionAndAnalysis();
 }
 
@@ -715,6 +818,14 @@ onMounted(() => {
     const analysisParam = params.get('analysis') as DataQueryType | null;
     if (analysisParam) {
         selectedDataQuery.value = analysisParam as DataQueryType;
+    }
+
+    const municipalitiesParam = params.get('municipalities');
+    if (municipalitiesParam) {
+        selectedMunicipalityIds.value = municipalitiesParam
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
     }
 
     const startParam = params.get('start');
@@ -754,8 +865,8 @@ onMounted(() => {
     // Auto-trigger query if step=results and we have stations + analysis
     if (
         stepParam === 'results' &&
-        selectedIds.value.size > 0 &&
-        selectedDataQuery.value
+        selectedDataQuery.value &&
+        (selectedIds.value.size > 0 || selectedMunicipalityIds.value.length > 0)
     ) {
         proceedWithDataQuery();
     }
@@ -832,6 +943,10 @@ onUnmounted(() => {
                                     :is-loading-results="isLoadingResults"
                                     :date-range="selectedDateRange"
                                     :month-year-range="selectedMonthYearRange"
+                                    :municipality-ids="selectedMunicipalityIds"
+                                    :selected-stations="
+                                        selectedStationsWithCoords
+                                    "
                                     @go-to-map="goToStep(2)"
                                     @select-data-query="selectDataQuery"
                                     @proceed-with-data-query="
@@ -842,6 +957,10 @@ onUnmounted(() => {
                                     @update-month-year-range="
                                         updateMonthYearRange
                                     "
+                                    @update-municipality-ids="
+                                        updateMunicipalityIds
+                                    "
+                                />
                                 />
                             </div>
                         </template>

@@ -51,6 +51,8 @@ const isDailyQuery = computed(
     () => props.results?.queryType === 'daily-values',
 );
 
+const isForecastQuery = computed(() => props.results?.queryType === 'forecast');
+
 const isMonthlyYearlyQuery = computed(
     () => props.results?.queryType === 'monthly-yearly-trends',
 );
@@ -65,7 +67,7 @@ const isExtremeValuesQuery = computed(
 
 const tickFormatter = computed(() => (value: number) => {
     const date = new Date(value);
-    if (isDailyQuery.value) {
+    if (isDailyQuery.value || isForecastQuery.value) {
         try {
             return date.toLocaleDateString('de-DE', {
                 day: '2-digit',

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\MunicipalityController;
 use App\Http\Controllers\Api\WeatherDataController;
 use App\Http\Controllers\Api\WeatherStationsController;
 use App\Http\Controllers\StationController;
@@ -13,6 +14,9 @@ Route::prefix('api')->group(function () {
     // Weather Stations
     Route::get('/stations', [WeatherStationsController::class, 'index'])->name('api.stations.index');
     Route::get('/stations/nearest', [WeatherStationsController::class, 'nearest'])->name('api.stations.nearest');
+
+    // Municipalities
+    Route::get('/municipalities', [MunicipalityController::class, 'index'])->name('api.municipalities.index');
 
     // Weather Data
     Route::get('/weather/recent', [WeatherDataController::class, 'recent'])->name('api.weather.recent');

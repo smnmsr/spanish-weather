@@ -67,9 +67,11 @@ class StationController
     public function queryData(Request $request)
     {
         $validated = $request->validate([
-            'type' => 'required|string|in:current-observations,daily-values,monthly-yearly-trends,extreme-values,climatological-normals',
-            'stationIds' => 'required|array|max:5',
-            'stationIds.*' => 'required|string',
+            'type' => 'required|string|in:current-observations,daily-values,monthly-yearly-trends,extreme-values,climatological-normals,forecast',
+            'stationIds' => 'required_unless:type,forecast|array|max:5',
+            'stationIds.*' => 'required_with:stationIds|string',
+            'municipalityIds' => 'required_if:type,forecast|array|max:5',
+            'municipalityIds.*' => 'required_with:municipalityIds|string',
             'dateRange.startDate' => 'required_if:type,daily-values|date',
             'dateRange.endDate' => 'required_if:type,daily-values|date|after_or_equal:dateRange.startDate',
             'monthYearRange.month' => 'required_if:type,monthly-yearly-trends|integer|min:1|max:12',
@@ -78,7 +80,112 @@ class StationController
         ]);
 
         $type = $validated['type'];
-        $stationIds = $validated['stationIds'];
+        $stationIds = $validated['stationIds'] ?? [];
+
+        if ($type === 'forecast') {
+            $municipalityIds = $validated['municipalityIds'] ?? [];
+
+            $allForecasts = [];
+            $stationsInfo = [];
+            $selectedIds = [];
+
+            foreach ($municipalityIds as $municipalityId) {
+                try {
+                    $forecastData = $this->aemet->getMunicipalityDailyForecast((string) $municipalityId);
+                } catch (\RuntimeException $e) {
+                    Log::error('Error fetching municipality forecast', [
+                        'message' => $e->getMessage(),
+                        'municipalityId' => $municipalityId,
+                    ]);
+
+                    continue; // Skip this municipality and continue with others
+                }
+
+                // Forecast response is typically an array with a single element
+                $forecastRecord = is_array($forecastData) && array_is_list($forecastData)
+                    ? ($forecastData[0] ?? [])
+                    : $forecastData;
+
+                $days = data_get($forecastRecord, 'prediccion.dia', []);
+                $locationName = $forecastRecord['nombre'] ?? $forecastRecord['municipio'] ?? 'Unbekannter Ort';
+                $locationProvince = $forecastRecord['provincia'] ?? null;
+
+                $averageFromEntries = function (array $entries, string $key): ?float {
+                    $values = array_filter(array_map(function ($entry) use ($key) {
+                        if (! isset($entry[$key])) {
+                            return null;
+                        }
+
+                        return is_numeric($entry[$key]) ? (float) $entry[$key] : null;
+                    }, $entries), fn ($value) => $value !== null);
+
+                    if (count($values) === 0) {
+                        return null;
+                    }
+
+                    return array_sum($values) / count($values);
+                };
+
+                foreach ($days as $day) {
+                    $date = $day['fecha'] ?? null;
+                    if (! $date) {
+                        continue;
+                    }
+
+                    $temperature = $day['temperatura'] ?? [];
+                    $humidityEntries = $day['humedadRelativa'] ?? [];
+                    $windEntries = $day['viento'] ?? [];
+                    $precipEntries = $day['probPrecipitacion'] ?? [];
+
+                    $tempMax = isset($temperature['maxima']) && is_numeric($temperature['maxima'])
+                        ? (float) $temperature['maxima']
+                        : null;
+                    $tempMin = isset($temperature['minima']) && is_numeric($temperature['minima'])
+                        ? (float) $temperature['minima']
+                        : null;
+                    $tempAvg = ($tempMax !== null && $tempMin !== null)
+                        ? ($tempMax + $tempMin) / 2
+                        : null;
+
+                    $humidityAvg = $averageFromEntries($humidityEntries, 'value');
+                    $windAvg = $averageFromEntries($windEntries, 'velocidad');
+                    $precipAvg = $averageFromEntries($precipEntries, 'value');
+
+                    $allForecasts[] = [
+                        'idema' => $municipalityId,
+                        'fecha' => $date,
+                        'tempMax' => $tempMax,
+                        'tempMin' => $tempMin,
+                        'tempAvg' => $tempAvg,
+                        'humidityAvg' => $humidityAvg,
+                        'windSpeedAvg' => $windAvg,
+                        'precipitationProb' => $precipAvg,
+                    ];
+                }
+
+                $stationsInfo[(string) $municipalityId] = [
+                    'id' => $municipalityId,
+                    'name' => $locationName,
+                    'provincia' => $locationProvince,
+                ];
+                $selectedIds[] = (string) $municipalityId;
+            }
+
+            // Return error if no forecasts could be fetched
+            if (count($allForecasts) === 0) {
+                return response()->json([
+                    'error' => 'AEMET API is currently unavailable. Please try again in a few minutes.',
+                    'type' => 'api_outage',
+                ], 503);
+            }
+
+            return response()->json([
+                'queryType' => $type,
+                'observations' => $allForecasts,
+                'stations' => $stationsInfo,
+                'selectedStationIds' => $selectedIds,
+            ]);
+        }
 
         if ($type === 'current-observations') {
             $observations = $this->aemet->getRecentObservations();
