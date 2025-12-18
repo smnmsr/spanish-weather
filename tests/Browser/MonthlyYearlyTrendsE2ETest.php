@@ -1,16 +1,15 @@
 <?php
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\Helpers\AemetFixtures;
 
 use function Tests\Helpers\configurePage;
 
-// Set up HTTP fakes once for all tests
-beforeEach(function () {
-    Http::fake(AemetFixtures::httpFakeConfig());
-});
-
 it('completes the full workflow from data-options to results for monthly yearly trends', function (string $device, bool $darkMode) {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
     // 1. Navigate directly to data-options step with pre-selected stations
     // Selecting Madrid Retiro (3195) and Barcelona Airport (0201D)
     $page = configurePage('/?step=data-options&stations=3195,0201D', $device, $darkMode);
@@ -58,6 +57,10 @@ it('completes the full workflow from data-options to results for monthly yearly 
 // The fixture data now supports all months/years dynamically, which is validated in the URL persistence test
 
 it('handles single year range correctly', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     $page = configurePage('/?step=data-options&stations=3195', 'desktop', false);
 
     // Select monthly-yearly-trends
@@ -77,6 +80,10 @@ it('handles single year range correctly', function () {
 });
 
 it('handles maximum year range correctly', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     $page = configurePage('/?step=data-options&stations=3195', 'desktop', false);
 
     // Select monthly-yearly-trends
@@ -97,6 +104,10 @@ it('handles maximum year range correctly', function () {
 });
 
 it('handles recent year range correctly', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     $page = configurePage('/?step=data-options&stations=3195,0201D', 'desktop', false);
 
     // Select monthly-yearly-trends
@@ -118,6 +129,10 @@ it('handles recent year range correctly', function () {
 });
 
 it('persists month and year range in URL when directly accessing results', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     // Navigate directly to results with month/year params in URL
     $page = visit('/?step=results&stations=3195&analysis=monthly-yearly-trends&month=6&startYear=2020&endYear=2024');
 
@@ -128,6 +143,10 @@ it('persists month and year range in URL when directly accessing results', funct
 });
 
 it('persists month and year range when navigating back from results', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     $page = configurePage('/?step=data-options&stations=3195', 'desktop', false);
 
     // Select monthly-yearly-trends and configure
@@ -151,6 +170,10 @@ it('persists month and year range when navigating back from results', function (
 });
 
 it('allows navigating between different weather dimensions in carousel', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     // Start directly at results
     $page = configurePage('/?step=results&stations=3195&analysis=monthly-yearly-trends&month=6&startYear=2020&endYear=2024', 'desktop', false);
 
@@ -181,6 +204,10 @@ it('allows navigating between different weather dimensions in carousel', functio
 });
 
 it('displays correct German adjectives for each dimension in monthly trends', function (string $dimension, string $expectedAdjective) {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     $page = configurePage('/?step=results&stations=3195&analysis=monthly-yearly-trends&month=6&startYear=2020&endYear=2024', 'desktop', false);
 
     // Wait for results to load

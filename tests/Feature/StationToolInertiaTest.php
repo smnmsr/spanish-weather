@@ -1,19 +1,18 @@
 <?php
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Helpers\AemetFixtures;
-
-// Set up HTTP mocks for all tests
-beforeEach(function () {
-    Http::fake(AemetFixtures::httpFakeConfig());
-});
 
 // ===========================
 // Inertia Page Rendering Tests
 // ===========================
 
 it('renders the station tool page with mocked data', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
     $response = $this->get(route('home'));
 
     $response->assertSuccessful();
@@ -26,6 +25,9 @@ it('renders the station tool page with mocked data', function () {
 });
 
 it('reads selected stations from query parameters', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
     $selectedStations = ['station1', 'station2', 'station3'];
     $stationsParam = implode(',', $selectedStations);
 
@@ -40,6 +42,10 @@ it('reads selected stations from query parameters', function () {
 });
 
 it('persists selected stations across requests via URL', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     $selectedStations = ['station1', 'station2'];
     $stationsParam = implode(',', $selectedStations);
 
@@ -54,6 +60,10 @@ it('persists selected stations across requests via URL', function () {
 });
 
 it('handles empty station selection from query parameters', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     $response = $this->get(route('home', ['stations' => '']));
 
     $response->assertSuccessful();
@@ -69,6 +79,10 @@ it('handles empty station selection from query parameters', function () {
 // ==========================
 
 it('renders the stations map on the home page', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     $response = $this->get(route('home'));
 
     $response->assertSuccessful();

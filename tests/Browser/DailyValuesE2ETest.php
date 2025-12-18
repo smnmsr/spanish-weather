@@ -1,16 +1,16 @@
 <?php
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\Helpers\AemetFixtures;
 
 use function Tests\Helpers\configurePage;
 
-// Set up HTTP fakes once for all tests
-beforeEach(function () {
-    Http::fake(AemetFixtures::httpFakeConfig());
-});
-
 it('completes the full workflow from home page to data display for daily values', function (string $device, bool $darkMode) {
+    // Clear cache and set up HTTP mocks before navigating
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     // 1. Navigate directly to data-options step with pre-selected stations
     // Selecting Madrid Retiro (3195), Barcelona Airport (0201D), and Valencia (5783)
     $page = configurePage('/?step=data-options&stations=3195,0201D,5783', $device, $darkMode);
@@ -37,6 +37,10 @@ it('completes the full workflow from home page to data display for daily values'
 ]);
 
 it('shows error message when no stations are selected for daily values', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     // Navigate directly to data-options without selecting stations
     $page = visit('/?step=data-options');
 
@@ -46,6 +50,10 @@ it('shows error message when no stations are selected for daily values', functio
 });
 
 it('displays date range selector when daily values is selected', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     $page = visit('/?step=data-options&stations=3195');
 
     // Select daily values
@@ -58,7 +66,8 @@ it('displays date range selector when daily values is selected', function () {
 });
 
 it('handles multiple stations for daily values correctly and displays all data', function () {
-    // Mock AEMET API
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
     Http::fake(AemetFixtures::httpFakeConfig());
 
     // Select all 5 available stations via data-options step
@@ -78,10 +87,14 @@ it('handles multiple stations for daily values correctly and displays all data',
         ->assertSee('BARCELONA AEROPUERTO')
         ->assertSee('VALENCIA')
         ->assertSee('SEVILLA AEROPUERTO')
-        ->assertSee('ZARAGOZA AEROPUERTO');
+        ->assertSee('BILBAO AEROPUERTO');
 });
 
 it('displays daily values observation data with date information', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     $page = visit('/?step=data-options&stations=3195');
 
     // Select daily values
@@ -99,6 +112,10 @@ it('displays daily values observation data with date information', function () {
 });
 
 it('submit button is disabled until date range is selected for daily values', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
     $page = visit('/?step=data-options&stations=3195');
 
     // Select daily values
