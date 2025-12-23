@@ -23,14 +23,17 @@ import type { QueryResults } from '@/types/station';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 interface Props {
-    results: QueryResults;
+    results: QueryResults | null;
     stationsWithData: string[];
     stationsWithoutData: string[];
     chartDataByStation: Record<string, any[]>;
     queryTypeTitle: string;
+    isLoading?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    isLoading: false,
+});
 
 const emit = defineEmits<{
     (e: 'go-back'): void;
@@ -230,8 +233,9 @@ const chartSlides = computed(() => {
 
 const extremeSlides = computed(() => {
     const observations = props.results?.observations ?? [];
+    const observationsArray = Array.isArray(observations) ? observations : [];
     const availableDimensions = new Set(
-        observations.map((record) => record.dimension),
+        observationsArray.map((record) => record.dimension),
     );
 
     const slides = [
@@ -446,9 +450,9 @@ const handleCarouselInit = (api: CarouselApi) => {
                         class="text-xs text-slate-600 sm:text-sm dark:text-slate-400"
                     >
                         Ergebnisse für
-                        {{ props.results.selectedStationIds?.length || 0 }}
+                        {{ props.results?.selectedStationIds?.length || 0 }}
                         Station{{
-                            (props.results.selectedStationIds?.length || 0) !==
+                            (props.results?.selectedStationIds?.length || 0) !==
                             1
                                 ? 'en'
                                 : ''
@@ -477,12 +481,12 @@ const handleCarouselInit = (api: CarouselApi) => {
                                 }}</strong>
                                 von
                                 <strong>{{
-                                    props.results.selectedStationIds?.length ||
+                                    props.results?.selectedStationIds?.length ||
                                     0
                                 }}</strong>
                                 Station{{
-                                    (props.results.selectedStationIds?.length ||
-                                        0) !== 1
+                                    (props.results?.selectedStationIds
+                                        ?.length || 0) !== 1
                                         ? 'en'
                                         : ''
                                 }}
@@ -497,7 +501,9 @@ const handleCarouselInit = (api: CarouselApi) => {
                                 class="list-inside list-disc text-sm text-slate-700 dark:text-slate-300"
                             >
                                 <li v-for="id in stationsWithoutData" :key="id">
-                                    {{ props.results.stations[id]?.name || id }}
+                                    {{
+                                        props.results?.stations[id]?.name || id
+                                    }}
                                 </li>
                             </ul>
                         </div>
@@ -526,7 +532,7 @@ const handleCarouselInit = (api: CarouselApi) => {
                                 >
                                     <span class="font-medium">
                                         {{
-                                            props.results.stations[stationId]
+                                            props.results?.stations[stationId]
                                                 ?.name || stationId
                                         }}
                                     </span>
@@ -550,8 +556,9 @@ const handleCarouselInit = (api: CarouselApi) => {
 
             <div
                 v-if="
-                    !props.results.observations ||
-                    props.results.observations.length === 0
+                    !isLoading &&
+                    (!props.results?.observations ||
+                        props.results?.observations.length === 0)
                 "
                 class="rounded-lg border border-slate-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900"
             >
@@ -561,12 +568,23 @@ const handleCarouselInit = (api: CarouselApi) => {
             </div>
 
             <div class="flex-1 overflow-visible">
+                <!-- Debug info -->
+                <div v-if="isDev" class="mb-2 text-xs text-slate-500">
+                    Debug: isLoading={{ isLoading }}, stationsWithData={{
+                        stationsWithData.length
+                    }}, isExtremeValuesQuery={{ isExtremeValuesQuery }},
+                    extremeSlides={{ extremeSlides.length }}, hasResults={{
+                        !!props.results
+                    }}
+                </div>
+
                 <!-- Extreme Values Carousel Display -->
                 <div
                     v-if="
                         isExtremeValuesQuery &&
-                        stationsWithData.length > 0 &&
-                        extremeSlides.length > 0
+                        (isLoading ||
+                            (stationsWithData.length > 0 &&
+                                extremeSlides.length > 0))
                     "
                     class="h-full w-full"
                 >
@@ -603,10 +621,12 @@ const handleCarouselInit = (api: CarouselApi) => {
                                         >
                                             <ExtremeValuesTable
                                                 :extreme-values="
-                                                    props.results.observations
+                                                    props.results
+                                                        ?.observations || []
                                                 "
                                                 :station-details="
-                                                    props.results.stations
+                                                    props.results?.stations ||
+                                                    {}
                                                 "
                                                 :dimensions="[slide.dimension]"
                                                 :metric="slide.metric"
@@ -638,7 +658,7 @@ const handleCarouselInit = (api: CarouselApi) => {
 
                 <!-- Standard Chart Carousel Display -->
                 <div
-                    v-else-if="stationsWithData.length > 0"
+                    v-else-if="isLoading || stationsWithData.length > 0"
                     class="h-full w-full"
                 >
                     <Carousel
@@ -676,12 +696,14 @@ const handleCarouselInit = (api: CarouselApi) => {
                                                 :dimension="slide.key"
                                                 :data="filteredChartData"
                                                 :stations="
-                                                    props.results.stations
+                                                    props.results?.stations ||
+                                                    {}
                                                 "
                                                 :tick-formatter="tickFormatter"
                                                 :is-monthly-yearly="
                                                     isMonthlyYearlyQuery
                                                 "
+                                                :loading="props.isLoading"
                                             />
                                         </CardContent>
                                     </Card>

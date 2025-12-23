@@ -24,12 +24,12 @@ it('zeigt den lustigen Siesta-Drawer wenn AEMET nicht erreichbar ist', function 
 
     // Navigate to data-options step
     $page->navigate('/?step=data-options');
-    $page->wait(0.5);
+    $page->wait(1);
 
-    // Trigger the outage event
+    // Manually dispatch the outage event (simulating what the polling would do)
     $page->script("window.dispatchEvent(new CustomEvent('aemet:outage', {
         detail: {
-            message: 'Hoppla! 🌩️ Die spanischen Wettergötter machen gerade Siesta. AEMET antwortet nicht.'
+            message: 'AEMET API nicht erreichbar'
         }
     }))");
 

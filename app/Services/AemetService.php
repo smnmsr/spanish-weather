@@ -274,6 +274,36 @@ class AemetService
     }
 
     /**
+     * Get monthly/annual climate data for a specific station and a single year.
+     * This is cached per-year to maximize cache reusability across queries.
+     *
+     * @param  string  $stationId  Station identifier (idema/indicativo)
+     * @param  int  $year  The year (e.g., 2024)
+     * @return array Array of monthly/annual climate records
+     */
+    public function getMonthlyAnnualDataForYear(string $stationId, int $year): array
+    {
+        $cacheKey = "aemet_monthly_annual_{$stationId}_{$year}";
+        $cacheTtl = config('aemet.cache_ttl.historical_data');
+
+        return Cache::remember($cacheKey, $cacheTtl, function () use ($stationId, $year) {
+            $endpoint = "/api/valores/climatologicos/mensualesanuales/datos/anioini/{$year}/aniofin/{$year}/estacion/{$stationId}";
+
+            try {
+                return $this->makeRequest($endpoint);
+            } catch (\RuntimeException $e) {
+                Log::warning('Error fetching monthly/annual data for year', [
+                    'stationId' => $stationId,
+                    'year' => $year,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return [];
+            }
+        });
+    }
+
+    /**
      * Get monthly/annual climate data for a specific station and year range.
      *
      * AEMET API has a 36-month (3-year) maximum range limitation.

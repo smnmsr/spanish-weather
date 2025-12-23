@@ -22,9 +22,12 @@ interface Props {
     stations: Record<string, { name?: string; provincia?: string | null }>;
     tickFormatter?: (value: number) => string;
     isMonthlyYearly?: boolean;
+    loading?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    loading: false,
+});
 
 // Generate colors for each station
 const stationColors = [
@@ -297,7 +300,13 @@ const yDomain = computed(() => {
 
 <template>
     <div class="flex h-full min-h-0 w-full flex-col">
-        <div class="min-h-0 w-full flex-1">
+        <!-- Skeleton loading state -->
+        <div v-if="loading" class="min-h-0 w-full flex-1 animate-pulse">
+            <div
+                class="h-full w-full rounded-lg bg-slate-200 dark:bg-slate-800"
+            ></div>
+        </div>
+        <div v-else class="min-h-0 w-full flex-1">
             <VisXYContainer
                 :data="chartData"
                 :margin="chartMargin"
@@ -386,6 +395,23 @@ const yDomain = computed(() => {
             </VisXYContainer>
         </div>
 
-        <ChartLegend :items="legendItems" class="flex-shrink-0 pt-2 sm:pt-3" />
+        <!-- Skeleton legend when loading -->
+        <div v-if="loading" class="flex-shrink-0 animate-pulse pt-2 sm:pt-3">
+            <div class="flex flex-wrap gap-3">
+                <div v-for="i in 3" :key="i" class="flex items-center gap-2">
+                    <div
+                        class="h-3 w-3 rounded-full bg-slate-300 dark:bg-slate-700"
+                    ></div>
+                    <div
+                        class="h-4 w-24 rounded bg-slate-300 dark:bg-slate-700"
+                    ></div>
+                </div>
+            </div>
+        </div>
+        <ChartLegend
+            v-else
+            :items="legendItems"
+            class="flex-shrink-0 pt-2 sm:pt-3"
+        />
     </div>
 </template>

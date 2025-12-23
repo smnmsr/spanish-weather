@@ -45,6 +45,10 @@ const selectedMunicipalityIds = ref<string[]>([]);
 const queryResults = ref<any>(null);
 const isLoadingResults = ref(false);
 const resultsSectionRef = ref<HTMLElement | null>(null);
+const batchId = ref<string | null>(null);
+const batchProgress = ref<number>(0);
+const batchStatus = ref<string>('idle');
+const pollingIntervalId = ref<number | null>(null);
 let scrollTimeout: number | null = null;
 
 const selectedCount = computed(() => selectedIds.value.size);
@@ -72,13 +76,20 @@ const selectedStationsWithCoords = computed(() => {
 
 const groupedObservations = computed(() => {
     if (!queryResults.value?.observations) return {};
+    if (!Array.isArray(queryResults.value.observations)) {
+        return {};
+    }
 
     const isDaily = queryResults.value.queryType === 'daily-values';
     const isForecast = queryResults.value.queryType === 'forecast';
     const grouped: Record<string, any[]> = {};
 
     queryResults.value.observations.forEach((obs: any) => {
-        const stationId = obs.idema;
+        const stationId = obs.idema ?? obs.indicativo;
+        if (!stationId) {
+            console.warn('Observation missing station ID:', obs);
+            return;
+        }
         if (!grouped[stationId]) {
             grouped[stationId] = [];
         }
@@ -119,9 +130,10 @@ const queryTypeTitle = computed(() => {
 
 const stationsWithData = computed(() => {
     if (!queryResults.value?.selectedStationIds) return [];
-    return queryResults.value.selectedStationIds.filter(
+    const result = queryResults.value.selectedStationIds.filter(
         (stationId: string) => groupedObservations.value[stationId]?.length > 0,
     );
+    return result;
 });
 
 const stationsWithoutData = computed(() => {
@@ -720,13 +732,16 @@ async function proceedWithDataQuery() {
 
     isLoadingResults.value = true;
     queryResults.value = null;
+    batchProgress.value = 0;
+    batchStatus.value = 'starting';
 
     try {
         const csrfToken =
             document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
                 ?.content || '';
 
-        const response = await fetch('/query-data', {
+        // Step 1: Start the batch query
+        const startResponse = await fetch('/api/batch/start', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -746,40 +761,192 @@ async function proceedWithDataQuery() {
             }),
         });
 
-        if (!response.ok) {
-            // Handle API outage (503) or server errors (500)
-            if (response.status === 503 || response.status === 500) {
-                const errorData = await response.json().catch(() => ({}));
-                window.dispatchEvent(
-                    new CustomEvent('aemet:outage', {
-                        detail: {
-                            status: response.status,
-                            type: errorData.type || 'server_error',
-                        },
-                    }),
-                );
-            }
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (!startResponse.ok) {
+            throw new Error(`Failed to start batch: ${startResponse.status}`);
         }
 
-        queryResults.value = await response.json();
+        const startData = await startResponse.json();
+        batchId.value = startData.batchId;
+        batchStatus.value = 'queued';
 
-        // Move to results step and persist query params
-        // Automatic data fetching has been disabled. User must manually fetch data now.
+        // Navigate to results step immediately
         updateUrlStep('results');
         updateUrlSelectionAndAnalysis();
 
-        // Scroll to results after a brief delay
         setTimeout(() => {
             resultsSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
         }, 300);
+
+        // Step 2: Start polling for progress
+        pollBatchProgress();
     } catch (error: any) {
-        console.error('Error fetching data:', error);
-        // Gracefully clear current results
+        console.error('Error starting batch query:', error);
+        batchStatus.value = 'error';
         queryResults.value = null;
+        isLoadingResults.value = false;
+    }
+}
+
+async function pollBatchProgress() {
+    if (!batchId.value) return;
+
+    // Clear existing polling interval if present
+    if (pollingIntervalId.value) {
+        clearInterval(pollingIntervalId.value);
+    }
+
+    // Poll every 500ms
+    pollingIntervalId.value = window.setInterval(async () => {
+        try {
+            const response = await fetch(
+                `/api/batch/${batchId.value}/progress`,
+            );
+
+            if (!response.ok) {
+                throw new Error(`Progress fetch failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log(
+                'pollBatchProgress: status =',
+                data.status,
+                'percent =',
+                data.percent,
+            );
+
+            batchStatus.value = data.status;
+            batchProgress.value = data.percent;
+
+            // Check for AEMET outage
+            if (data.aemetOutage) {
+                console.log(
+                    'pollBatchProgress: AEMET outage detected, dispatching event',
+                );
+                window.dispatchEvent(
+                    new CustomEvent('aemet:outage', {
+                        detail: {
+                            message: data.error || 'AEMET API nicht erreichbar',
+                        },
+                    }),
+                );
+
+                // Stop polling
+                if (pollingIntervalId.value) {
+                    clearInterval(pollingIntervalId.value);
+                    pollingIntervalId.value = null;
+                }
+                isLoadingResults.value = false;
+                return;
+            }
+
+            // If batch is complete or failed, fetch results
+            if (
+                data.status === 'completed' ||
+                data.status === 'failed' ||
+                data.status === 'cancelled'
+            ) {
+                console.log(
+                    'pollBatchProgress: Batch reached terminal state:',
+                    data.status,
+                );
+
+                if (pollingIntervalId.value) {
+                    clearInterval(pollingIntervalId.value);
+                    pollingIntervalId.value = null;
+                }
+
+                if (data.status === 'completed') {
+                    console.log(
+                        'pollBatchProgress: Batch completed, calling fetchBatchResults',
+                    );
+                    await fetchBatchResults();
+                } else {
+                    batchStatus.value = data.status;
+                    isLoadingResults.value = false;
+                }
+            }
+        } catch (error: any) {
+            console.error('Error polling batch progress:', error);
+            // Continue polling despite errors
+        }
+    }, 500);
+}
+
+async function fetchBatchResults() {
+    if (!batchId.value) return;
+
+    console.log(
+        'fetchBatchResults: Starting fetch for batchId:',
+        batchId.value,
+    );
+
+    try {
+        const response = await fetch(`/api/batch/${batchId.value}/results`);
+        console.log('fetchBatchResults: Response status:', response.status);
+
+        if (response.status === 202) {
+            // Still processing, continue polling
+            console.log(
+                'fetchBatchResults: Still processing (202), retrying in 1s',
+            );
+            setTimeout(pollBatchProgress, 1000);
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(`Results fetch failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('fetchBatchResults: Received data:', data);
+        console.log(
+            'fetchBatchResults: Setting queryResults to:',
+            data.results,
+        );
+
+        queryResults.value = data.results;
+        console.log(
+            'fetchBatchResults: queryResults.value is now:',
+            queryResults.value,
+        );
+
+        batchStatus.value = 'completed';
+
+        // Scroll to results
+        setTimeout(() => {
+            resultsSectionRef.value?.scrollIntoView({
+                behavior: 'smooth',
+            });
+        }, 300);
+    } catch (error: any) {
+        console.error('Error fetching batch results:', error);
+        batchStatus.value = 'error';
     } finally {
         isLoadingResults.value = false;
     }
+}
+
+function cancelBatchQuery() {
+    if (!batchId.value) return;
+
+    if (pollingIntervalId.value) {
+        clearInterval(pollingIntervalId.value);
+        pollingIntervalId.value = null;
+    }
+
+    fetch(`/api/batch/${batchId.value}/cancel`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN':
+                document.querySelector<HTMLMetaElement>(
+                    'meta[name="csrf-token"]',
+                )?.content || '',
+        },
+    }).catch((e) => console.error('Error cancelling batch:', e));
+
+    batchId.value = null;
+    batchStatus.value = 'cancelled';
+    isLoadingResults.value = false;
 }
 
 function resetSelection() {
@@ -903,6 +1070,9 @@ onUnmounted(() => {
     if (scrollTimeout) {
         clearTimeout(scrollTimeout);
     }
+    if (pollingIntervalId.value) {
+        clearInterval(pollingIntervalId.value);
+    }
 });
 </script>
 
@@ -961,19 +1131,88 @@ onUnmounted(() => {
                                         updateMunicipalityIds
                                     "
                                 />
-                                />
                             </div>
                         </template>
                         <template v-else-if="currentStep === 'results'">
-                            <div ref="resultsSectionRef" class="h-full">
+                            <div
+                                ref="resultsSectionRef"
+                                class="relative h-full"
+                            >
                                 <ResultsSection
                                     :results="queryResults"
                                     :stations-with-data="stationsWithData"
                                     :stations-without-data="stationsWithoutData"
                                     :chart-data-by-station="chartDataByStation"
                                     :query-type-title="queryTypeTitle"
+                                    :is-loading="
+                                        isLoadingResults &&
+                                        batchStatus !== 'completed'
+                                    "
                                     @go-back="goToStep(3)"
                                 />
+
+                                <!-- Full-screen backdrop -->
+                                <div
+                                    v-if="
+                                        isLoadingResults &&
+                                        batchStatus !== 'completed'
+                                    "
+                                    class="fixed inset-0 z-40 backdrop-blur-sm backdrop-brightness-70"
+                                ></div>
+
+                                <!-- Progress overlay while loading -->
+                                <div
+                                    v-if="
+                                        isLoadingResults &&
+                                        batchStatus !== 'completed'
+                                    "
+                                    class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center"
+                                >
+                                    <div
+                                        class="pointer-events-auto flex flex-col items-center gap-3 rounded-lg bg-white/95 p-6 shadow-lg dark:bg-slate-900/95"
+                                    >
+                                        <div
+                                            class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-500 dark:border-slate-700 dark:border-t-blue-400"
+                                        ></div>
+                                        <p
+                                            class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            Daten werden abgerufen...
+                                        </p>
+                                        <div class="w-48">
+                                            <div
+                                                class="mb-1 flex justify-between"
+                                            >
+                                                <span
+                                                    class="text-xs text-slate-600 dark:text-slate-400"
+                                                >
+                                                    Fortschritt
+                                                </span>
+                                                <span
+                                                    class="text-xs font-semibold text-slate-600 dark:text-slate-400"
+                                                >
+                                                    {{ batchProgress }}%
+                                                </span>
+                                            </div>
+                                            <div
+                                                class="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+                                            >
+                                                <div
+                                                    class="h-full bg-blue-500 transition-all duration-300"
+                                                    :style="{
+                                                        width: `${batchProgress}%`,
+                                                    }"
+                                                ></div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            @click="cancelBatchQuery"
+                                            class="mt-2 px-4 py-2 text-sm text-slate-600 underline hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                                        >
+                                            Abbrechen
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </template>
                     </section>
