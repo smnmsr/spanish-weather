@@ -27,6 +27,8 @@ export interface ChartDataPoint {
     windGust?: number | null;
     windDirection?: number | null;
     pressure?: number | null;
+    pressureMin?: number | null;
+    pressureMax?: number | null;
     sunshine?: number | null;
 }
 

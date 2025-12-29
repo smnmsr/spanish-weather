@@ -209,7 +209,9 @@ const chartSlides = computed(() => {
         },
         pressure: {
             title: 'Luftdruck',
-            description: 'Luftdruck (hPa) – Mittelwert',
+            description: isDailyQuery.value
+                ? 'Luftdruck (hPa) – Min/Max (Bereich)'
+                : 'Luftdruck (hPa) – Mittelwert',
         },
         sunshine: {
             title: 'Sonnenschein',
@@ -217,17 +219,27 @@ const chartSlides = computed(() => {
         },
     };
 
-    return (
-        [
-            'temperature',
-            'precipitation',
-            'humidity',
-            'wind',
-            'windDirection',
-            'pressure',
-            'sunshine',
-        ] as const
-    ).map((dimension) => {
+    // Dimensions to display - exclude sunshine from daily values
+    const dimensions: readonly DimensionKey[] = isDailyQuery.value
+        ? [
+              'temperature',
+              'precipitation',
+              'humidity',
+              'wind',
+              'windDirection',
+              'pressure',
+          ]
+        : [
+              'temperature',
+              'precipitation',
+              'humidity',
+              'wind',
+              'windDirection',
+              'pressure',
+              'sunshine',
+          ];
+
+    return dimensions.map((dimension) => {
         let title = baseTitles[dimension].title;
 
         // Add month and year range for monthly-yearly trends

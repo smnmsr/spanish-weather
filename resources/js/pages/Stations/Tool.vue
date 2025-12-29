@@ -212,10 +212,12 @@ const chartDataByStation = computed(() => {
             };
 
             if (isDaily) {
-                // Daily climate data has: tmed, tmax, tmin, hrMedia, hrMax, hrMin, prec, velmedia, sol
-                // Try multiple field names for sunshine duration (API inconsistency)
-                const sunshineValue =
-                    obs.sol ?? obs.insolacion ?? obs.radiacion ?? null;
+                // Daily climate data has: tmed, tmax, tmin, hrMedia, hrMax, hrMin, prec, velmedia, racha, dir, presMin, presMax
+                // Note: velmedia and racha are in m/s, need conversion to km/h
+                const windMeanMs = parseValue(obs.velmedia);
+                const windGustMs = parseValue(obs.racha);
+                const presMinVal = parseValue(obs.presMin);
+                const presMaxVal = parseValue(obs.presMax);
 
                 return {
                     time: date.getTime(),
@@ -226,8 +228,16 @@ const chartDataByStation = computed(() => {
                     humidityMax: parseValue(obs.hrMax),
                     humidityMin: parseValue(obs.hrMin),
                     precipitation: parseValue(obs.prec),
-                    wind: parseValue(obs.velmedia),
-                    sunshine: parseValue(sunshineValue),
+                    wind: windMeanMs != null ? windMeanMs * 3.6 : null, // m/s → km/h
+                    windGust: windGustMs != null ? windGustMs * 3.6 : null, // m/s → km/h
+                    windDirection: parseValue(obs.dir),
+                    pressure:
+                        presMinVal != null && presMaxVal != null
+                            ? (presMinVal + presMaxVal) / 2
+                            : null, // Mean of min/max
+                    pressureMin: presMinVal,
+                    pressureMax: presMaxVal,
+                    sunshine: null, // Not available in daily values API
                 };
             } else if (isMonthlyYearly) {
                 // Monthly/yearly climate data has: tm_mes (avg), tm_max, tm_min, p_mes (precip), hr (humidity)

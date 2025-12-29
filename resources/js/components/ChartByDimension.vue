@@ -86,7 +86,7 @@ const dimensionConfig = {
         unit: 'hPa',
         color: '#0ea5e9',
         type: 'line' as const,
-        hasMinMax: false,
+        hasMinMax: true,
     },
     sunshine: {
         label: 'Sonnenscheindauer',
@@ -200,6 +200,11 @@ const chartData = computed(() => {
             if (base === 'min') return 'humidityMin';
             return 'humidity';
         }
+        if (props.dimension === 'pressure') {
+            if (base === 'max') return 'pressureMax';
+            if (base === 'min') return 'pressureMin';
+            return 'pressure';
+        }
         return props.dimension;
     };
 
@@ -292,6 +297,11 @@ const yDomain = computed(() => {
                     const hMax = point.humidityMax;
                     if (hMin != null) values.push(hMin);
                     if (hMax != null) values.push(hMax);
+                } else if (props.dimension === 'pressure') {
+                    const pMin = point.pressureMin;
+                    const pMax = point.pressureMax;
+                    if (pMin != null) values.push(pMin);
+                    if (pMax != null) values.push(pMax);
                 }
             }
 
