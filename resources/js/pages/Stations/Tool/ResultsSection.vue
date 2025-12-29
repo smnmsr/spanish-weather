@@ -117,15 +117,42 @@ const tickFormatter = computed(() => (value: number) => {
 
 // Detect stations with partial data
 const partialDataInfo = computed(() => {
-    const dimensions = [
-        'temperature',
-        'precipitation',
-        'humidity',
-        'wind',
-        'windDirection',
-        'pressure',
-        'sunshine',
-    ];
+    // Use same dimensions as displayed in charts for current query type
+    let dimensions: DimensionKey[];
+
+    if (isDailyQuery.value) {
+        dimensions = [
+            'temperature',
+            'precipitation',
+            'humidity',
+            'wind',
+            'windDirection',
+            'pressure',
+        ];
+    } else if (isMonthlyYearlyQuery.value) {
+        dimensions = [
+            'temperature',
+            'precipitation',
+            'humidity',
+            'wind',
+            'pressure',
+            'sunshine',
+            'clearDays',
+            'overcastDays',
+            'rainyDays',
+        ];
+    } else {
+        dimensions = [
+            'temperature',
+            'precipitation',
+            'humidity',
+            'wind',
+            'windDirection',
+            'pressure',
+            'sunshine',
+        ];
+    }
+
     const stationMissingDimensions: Record<string, string[]> = {};
 
     props.stationsWithData.forEach((stationId) => {
@@ -138,7 +165,7 @@ const partialDataInfo = computed(() => {
                 (point: ChartDataPoint) => point[dimension] != null,
             );
             if (!hasData) {
-                const labels: Record<string, string> = {
+                const labels: Record<DimensionKey, string> = {
                     temperature: 'Temperatur',
                     precipitation: 'Niederschlag',
                     humidity: 'Luftfeuchtigkeit',
@@ -146,6 +173,9 @@ const partialDataInfo = computed(() => {
                     windDirection: 'Windrichtung',
                     pressure: 'Luftdruck',
                     sunshine: 'Sonnenschein',
+                    clearDays: 'Klare Tage',
+                    overcastDays: 'Bedeckte Tage',
+                    rainyDays: 'Regentage',
                 };
                 missingDimensions.push(labels[dimension]);
             }
@@ -217,27 +247,58 @@ const chartSlides = computed(() => {
             title: 'Sonnenschein',
             description: 'Sonnenscheindauer (h) für alle Stationen',
         },
+        clearDays: {
+            title: 'Klare Tage',
+            description: 'Anzahl klarer Tage pro Monat',
+        },
+        overcastDays: {
+            title: 'Bedeckte Tage',
+            description: 'Anzahl bedeckter Tage pro Monat',
+        },
+        rainyDays: {
+            title: 'Regentage',
+            description: 'Anzahl der Regentage pro Monat',
+        },
     };
 
-    // Dimensions to display - exclude sunshine from daily values
-    const dimensions: readonly DimensionKey[] = isDailyQuery.value
-        ? [
-              'temperature',
-              'precipitation',
-              'humidity',
-              'wind',
-              'windDirection',
-              'pressure',
-          ]
-        : [
-              'temperature',
-              'precipitation',
-              'humidity',
-              'wind',
-              'windDirection',
-              'pressure',
-              'sunshine',
-          ];
+    // Dimensions to display based on query type
+    let dimensions: readonly DimensionKey[];
+
+    if (isDailyQuery.value) {
+        // Daily values: exclude sunshine
+        dimensions = [
+            'temperature',
+            'precipitation',
+            'humidity',
+            'wind',
+            'windDirection',
+            'pressure',
+        ];
+    } else if (isMonthlyYearlyQuery.value) {
+        // Monthly-yearly trends: exclude windDirection, add sunshine and weather event counts
+        dimensions = [
+            'temperature',
+            'precipitation',
+            'humidity',
+            'wind',
+            'pressure',
+            'sunshine',
+            'clearDays',
+            'overcastDays',
+            'rainyDays',
+        ];
+    } else {
+        // Other query types: default dimensions
+        dimensions = [
+            'temperature',
+            'precipitation',
+            'humidity',
+            'wind',
+            'windDirection',
+            'pressure',
+            'sunshine',
+        ];
+    }
 
     return dimensions.map((dimension) => {
         let title = baseTitles[dimension].title;
@@ -336,6 +397,9 @@ const getAdjectiveForDimension = (dimension: DimensionKey): string => {
         windDirection: 'Windrichtungen',
         pressure: 'Luftdrücke',
         sunshine: 'Sonnenscheindauer',
+        clearDays: 'Klare Tage',
+        overcastDays: 'Bedeckte Tage',
+        rainyDays: 'Regentage',
     };
     return adjectives[dimension];
 };

@@ -240,7 +240,16 @@ const chartDataByStation = computed(() => {
                     sunshine: null, // Not available in daily values API
                 };
             } else if (isMonthlyYearly) {
-                // Monthly/yearly climate data has: tm_mes (avg), tm_max, tm_min, p_mes (precip), hr (humidity)
+                // Monthly/yearly climate data: tm_mes, tm_max, tm_min, p_mes, hr, w_med, q_med, q_min, q_max, inso, n_des, n_cub, n_llu
+                // Parse pressure min/max from format "value(day)" e.g., "950.5(04)"
+                const parseValueWithDay = (
+                    str: string | undefined,
+                ): number | null => {
+                    if (!str) return null;
+                    const match = str.match(/^([\d,]+)\(/);
+                    return match ? parseValue(match[1]) : null;
+                };
+
                 return {
                     time: date.getTime(),
                     temperature: parseValue(obs.tm_mes),
@@ -250,8 +259,16 @@ const chartDataByStation = computed(() => {
                     humidityMax: null,
                     humidityMin: null,
                     precipitation: parseValue(obs.p_mes),
-                    wind: null,
-                    sunshine: null,
+                    wind: parseValue(obs.w_med),
+                    windGust: null,
+                    windDirection: null, // Not available as mean direction in monthly data
+                    pressure: parseValue(obs.q_med),
+                    pressureMin: parseValueWithDay(obs.q_min),
+                    pressureMax: parseValueWithDay(obs.q_max),
+                    sunshine: parseValue(obs.inso),
+                    clearDays: parseValue(obs.n_des),
+                    overcastDays: parseValue(obs.n_cub),
+                    rainyDays: parseValue(obs.n_llu),
                 };
             } else if (isNormals) {
                 // Climatological normals: use monthly means across 1991–2020

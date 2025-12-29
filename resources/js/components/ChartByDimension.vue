@@ -95,6 +95,27 @@ const dimensionConfig = {
         type: 'bar' as const,
         hasMinMax: false,
     },
+    clearDays: {
+        label: 'Klare Tage',
+        unit: 'Tage',
+        color: '#22c55e',
+        type: 'bar' as const,
+        hasMinMax: false,
+    },
+    overcastDays: {
+        label: 'Bedeckte Tage',
+        unit: 'Tage',
+        color: '#6b7280',
+        type: 'bar' as const,
+        hasMinMax: false,
+    },
+    rainyDays: {
+        label: 'Regentage',
+        unit: 'Tage',
+        color: '#3b82f6',
+        type: 'bar' as const,
+        hasMinMax: false,
+    },
 };
 
 const config = computed(() => dimensionConfig[props.dimension]);

@@ -633,6 +633,28 @@ class AemetFixtures
                 $humidity = (int) (80 - ($avgTemp / 2) + mt_rand(-10, 10));
                 $humidity = max(25, min(95, $humidity)); // Clamp between 25-95%
 
+                // Wind speed (mean) - varies by season and station
+                $windSpeed = mt_rand(50, 150) / 10.0; // 5-15 km/h
+
+                // Pressure (mean) - realistic sea level pressure
+                $pressure = number_format(mt_rand(10000, 10250) / 10.0, 1, ',', ''); // 1000-1025 hPa
+
+                // Pressure min/max with embedded day
+                $pressureMin = number_format(mt_rand(9800, 10100) / 10.0, 1, ',', '');
+                $pressureMax = number_format(mt_rand(10200, 10400) / 10.0, 1, ',', '');
+                $pressureMinDay = mt_rand(1, 28);
+                $pressureMaxDay = mt_rand(1, 28);
+
+                // Sunshine hours - varies by season (more in summer)
+                $sunshineBase = in_array($month, [5, 6, 7, 8]) ? 200 : 100; // Summer vs other
+                $sunshine = number_format(mt_rand(50, $sunshineBase + 50), 1, ',', ''); // 50-250h
+
+                // Weather event days (n_des = clear, n_cub = overcast, n_llu = rainy)
+                $daysInMonth = 30; // Simplified
+                $clearDays = mt_rand(3, 20);
+                $overcastDays = mt_rand(2, 15);
+                $rainyDays = mt_rand(2, 12);
+
                 $data[] = [
                     'idema' => $stationId,
                     'indicativo' => $stationId,
@@ -642,6 +664,14 @@ class AemetFixtures
                     'tm_min' => number_format($minTemp, 1, ',', ''),
                     'p_mes' => (string) $precipitation,
                     'hr' => (string) $humidity,
+                    'w_med' => number_format($windSpeed, 1, ',', ''),
+                    'q_med' => $pressure,
+                    'q_min' => "{$pressureMin}({$pressureMinDay})",
+                    'q_max' => "{$pressureMax}({$pressureMaxDay})",
+                    'inso' => $sunshine,
+                    'n_des' => (string) $clearDays,
+                    'n_cub' => (string) $overcastDays,
+                    'n_llu' => (string) $rainyDays,
                 ];
             }
         }

@@ -12,7 +12,10 @@ export type DimensionKey =
     | 'wind'
     | 'windDirection'
     | 'pressure'
-    | 'sunshine';
+    | 'sunshine'
+    | 'clearDays'
+    | 'overcastDays'
+    | 'rainyDays';
 
 export interface ChartDataPoint {
     time: number; // Unix timestamp (ms)
@@ -30,6 +33,9 @@ export interface ChartDataPoint {
     pressureMin?: number | null;
     pressureMax?: number | null;
     sunshine?: number | null;
+    clearDays?: number | null;
+    overcastDays?: number | null;
+    rainyDays?: number | null;
 }
 
 export interface Municipality {
@@ -51,4 +57,7 @@ export const DimensionLabels: Record<DimensionKey, string> = {
     windDirection: 'Windrichtung',
     pressure: 'Luftdruck',
     sunshine: 'Sonnenschein',
+    clearDays: 'Klare Tage',
+    overcastDays: 'Bedeckte Tage',
+    rainyDays: 'Regentage',
 };
