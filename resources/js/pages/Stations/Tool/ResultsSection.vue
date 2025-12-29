@@ -122,6 +122,8 @@ const partialDataInfo = computed(() => {
         'precipitation',
         'humidity',
         'wind',
+        'windDirection',
+        'pressure',
         'sunshine',
     ];
     const stationMissingDimensions: Record<string, string[]> = {};
@@ -141,6 +143,8 @@ const partialDataInfo = computed(() => {
                     precipitation: 'Niederschlag',
                     humidity: 'Luftfeuchtigkeit',
                     wind: 'Wind',
+                    windDirection: 'Windrichtung',
+                    pressure: 'Luftdruck',
                     sunshine: 'Sonnenschein',
                 };
                 missingDimensions.push(labels[dimension]);
@@ -196,7 +200,16 @@ const chartSlides = computed(() => {
         },
         wind: {
             title: 'Wind',
-            description: 'Windgeschwindigkeit (km/h) – Mittelwert',
+            description:
+                'Windgeschwindigkeit (km/h) – Mittelwert (Linie), Böen (Fläche)',
+        },
+        windDirection: {
+            title: 'Windrichtung',
+            description: 'Windrichtung (°) – Mittelwert',
+        },
+        pressure: {
+            title: 'Luftdruck',
+            description: 'Luftdruck (hPa) – Mittelwert',
         },
         sunshine: {
             title: 'Sonnenschein',
@@ -210,6 +223,8 @@ const chartSlides = computed(() => {
             'precipitation',
             'humidity',
             'wind',
+            'windDirection',
+            'pressure',
             'sunshine',
         ] as const
     ).map((dimension) => {
@@ -306,6 +321,8 @@ const getAdjectiveForDimension = (dimension: DimensionKey): string => {
         precipitation: 'Niederschläge',
         humidity: 'Luftfeuchtigkeiten',
         wind: 'Windgeschwindigkeiten',
+        windDirection: 'Windrichtungen',
+        pressure: 'Luftdrücke',
         sunshine: 'Sonnenscheindauer',
     };
     return adjectives[dimension];

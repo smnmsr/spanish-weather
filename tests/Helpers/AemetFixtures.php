@@ -79,7 +79,10 @@ class AemetFixtures
                 'hr' => 72,
                 'prec' => 0.0,
                 'vv' => 5.2,
+                'vmax' => 7.5,
+                'dv' => 230,
                 'pres' => 1013.2,
+                'inso' => 45,
             ],
             [
                 'idema' => '3195',
@@ -88,7 +91,10 @@ class AemetFixtures
                 'hr' => 68,
                 'prec' => 0.0,
                 'vv' => 6.8,
+                'vmax' => 9.2,
+                'dv' => 235,
                 'pres' => 1013.0,
+                'inso' => 58,
             ],
             [
                 'idema' => '3195',
@@ -97,7 +103,10 @@ class AemetFixtures
                 'hr' => 62,
                 'prec' => 0.0,
                 'vv' => 8.1,
+                'vmax' => 11.5,
+                'dv' => 240,
                 'pres' => 1012.8,
+                'inso' => 55,
             ],
             [
                 'idema' => '3195',
@@ -106,7 +115,10 @@ class AemetFixtures
                 'hr' => 58,
                 'prec' => 0.0,
                 'vv' => 9.3,
+                'vmax' => 12.8,
+                'dv' => 245,
                 'pres' => 1012.5,
+                'inso' => 60,
             ],
             [
                 'idema' => '3195',
@@ -115,7 +127,10 @@ class AemetFixtures
                 'hr' => 55,
                 'prec' => 0.0,
                 'vv' => 10.5,
+                'vmax' => 14.2,
+                'dv' => 250,
                 'pres' => 1012.2,
+                'inso' => 62,
             ],
 
             // Barcelona Airport observations (0201D)
@@ -126,7 +141,10 @@ class AemetFixtures
                 'hr' => 78,
                 'prec' => 0.2,
                 'vv' => 12.5,
+                'vmax' => 16.3,
+                'dv' => 180,
                 'pres' => 1015.8,
+                'inso' => 50,
             ],
             [
                 'idema' => '0201D',
@@ -135,7 +153,10 @@ class AemetFixtures
                 'hr' => 75,
                 'prec' => 0.1,
                 'vv' => 13.2,
+                'vmax' => 17.5,
+                'dv' => 185,
                 'pres' => 1015.5,
+                'inso' => 52,
             ],
             [
                 'idema' => '0201D',
@@ -144,7 +165,10 @@ class AemetFixtures
                 'hr' => 71,
                 'prec' => 0.0,
                 'vv' => 14.8,
+                'vmax' => 19.2,
+                'dv' => 190,
                 'pres' => 1015.2,
+                'inso' => 54,
             ],
             [
                 'idema' => '0201D',
@@ -153,7 +177,10 @@ class AemetFixtures
                 'hr' => 68,
                 'prec' => 0.0,
                 'vv' => 15.5,
+                'vmax' => 20.1,
+                'dv' => 195,
                 'pres' => 1015.0,
+                'inso' => 56,
             ],
             [
                 'idema' => '0201D',
@@ -162,7 +189,10 @@ class AemetFixtures
                 'hr' => 65,
                 'prec' => 0.0,
                 'vv' => 16.2,
+                'vmax' => 21.3,
+                'dv' => 200,
                 'pres' => 1014.8,
+                'inso' => 58,
             ],
 
             // Valencia observations (5783)

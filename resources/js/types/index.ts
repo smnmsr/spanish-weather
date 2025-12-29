@@ -10,14 +10,23 @@ export type DimensionKey =
     | 'precipitation'
     | 'humidity'
     | 'wind'
+    | 'windDirection'
+    | 'pressure'
     | 'sunshine';
 
 export interface ChartDataPoint {
     time: number; // Unix timestamp (ms)
     temperature?: number | null;
+    temperatureMax?: number | null;
+    temperatureMin?: number | null;
     precipitation?: number | null;
     humidity?: number | null;
+    humidityMax?: number | null;
+    humidityMin?: number | null;
     wind?: number | null;
+    windGust?: number | null;
+    windDirection?: number | null;
+    pressure?: number | null;
     sunshine?: number | null;
 }
 
@@ -37,5 +46,7 @@ export const DimensionLabels: Record<DimensionKey, string> = {
     precipitation: 'Niederschlag',
     humidity: 'Luftfeuchtigkeit',
     wind: 'Wind',
+    windDirection: 'Windrichtung',
+    pressure: 'Luftdruck',
     sunshine: 'Sonnenschein',
 };

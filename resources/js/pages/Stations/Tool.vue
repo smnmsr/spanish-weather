@@ -286,7 +286,13 @@ const chartDataByStation = computed(() => {
                     humidityMin: null,
                     precipitation: parseValue(obs.prec),
                     wind: parseValue(obs.vv),
-                    sunshine: null,
+                    windGust: parseValue(obs.vmax),
+                    windDirection: parseValue(obs.dv),
+                    pressure: parseValue(obs.pres),
+                    sunshine: (() => {
+                        const v = parseValue(obs.inso ?? null);
+                        return v == null ? null : v / 60; // convert minutes → hours
+                    })(),
                 };
             }
         });

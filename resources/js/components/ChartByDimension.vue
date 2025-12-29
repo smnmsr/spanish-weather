@@ -17,6 +17,8 @@ interface Props {
         | 'precipitation'
         | 'humidity'
         | 'wind'
+        | 'windDirection'
+        | 'pressure'
         | 'sunshine';
     data: Record<string, ChartDataPoint[]>;
     stations: Record<string, { name?: string; provincia?: string | null }>;
@@ -69,6 +71,20 @@ const dimensionConfig = {
         label: 'Wind',
         unit: 'km/h',
         color: '#d946ef',
+        type: 'line' as const,
+        hasMinMax: false,
+    },
+    windDirection: {
+        label: 'Windrichtung',
+        unit: '°',
+        color: '#22c55e',
+        type: 'line' as const,
+        hasMinMax: false,
+    },
+    pressure: {
+        label: 'Luftdruck',
+        unit: 'hPa',
+        color: '#0ea5e9',
         type: 'line' as const,
         hasMinMax: false,
     },
@@ -213,6 +229,12 @@ const chartData = computed(() => {
                 dataPoint[`station_${stationId}_max`] = maxValue;
                 dataPoint[`station_${stationId}_min`] = minValue;
             }
+
+            // Include gust values for wind dimension
+            if (props.dimension === 'wind') {
+                const gustValue = point?.windGust ?? null;
+                dataPoint[`station_${stationId}_gust`] = gustValue;
+            }
         });
 
         return dataPoint;
@@ -271,6 +293,12 @@ const yDomain = computed(() => {
                     if (hMin != null) values.push(hMin);
                     if (hMax != null) values.push(hMax);
                 }
+            }
+
+            // For wind, include gust values in domain
+            if (props.dimension === 'wind') {
+                const gust = (point as any).windGust;
+                if (gust != null) values.push(gust as number);
             }
         });
     });
@@ -368,6 +396,32 @@ const yDomain = computed(() => {
                         "
                         :color="getStationColor(stationId)"
                         :line-width="2"
+                        :interpolate-missing-data="true"
+                    />
+
+                    <!-- Wind gust overlay area: [mean, gust-mean] -->
+                    <VisArea
+                        v-if="props.dimension === 'wind'"
+                        :x="(d: any) => d.time"
+                        :y="[
+                            (d: any) => {
+                                const meanV = d[`station_${stationId}`];
+                                return meanV != null ? meanV : undefined;
+                            },
+                            (d: any) => {
+                                const meanV = d[`station_${stationId}`];
+                                const gustV = d[`station_${stationId}_gust`];
+                                if (meanV == null || gustV == null)
+                                    return undefined;
+                                return Math.max(0, gustV - meanV);
+                            },
+                        ]"
+                        :color="
+                            (_d: any, i: number) =>
+                                i === 0
+                                    ? 'rgba(0,0,0,0)'
+                                    : hexToRgba(getStationColor(stationId), 0.2)
+                        "
                         :interpolate-missing-data="true"
                     />
                 </template>
