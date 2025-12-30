@@ -50,6 +50,7 @@ npm run dev  # Starts vite dev server with HMR
 
 ### Testing Strategy
 
+- **Manual testing first**: When adding or refactoring features, implement the changes and return to the user for manual testing and feedback. Automated tests come only after manual testing is complete and user has confirmed the feature works as expected.
 - **Pest v4** with Browser Testing plugin (Playwright-based)
 - Browser tests in `tests/Browser/` - **prefer these for UI workflows**
     - Example: `StationsMapClusterTest.php` validates map rendering
@@ -57,7 +58,6 @@ npm run dev  # Starts vite dev server with HMR
     - Use `->screenshot(true)` for visual debugging
 - Feature tests for API endpoints in `tests/Feature/`
 - **Run focused tests**: `php artisan test tests/Browser/StationsMapClusterTest.php`
-- **All changes require test coverage** - update or create tests before finalizing
 
 ### Code Quality Scripts
 
@@ -350,7 +350,10 @@ protected function isAccessible(User $user, ?string $path = null): bool
 
 ## Test Enforcement
 
-- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
+- **Workflow**: Implement changes → Return to user for manual testing → Collect feedback → Add automated tests after manual validation
+- When adding or refactoring features, implement first and ask the user to test manually before writing automated tests
+- Automated tests are written only after the user confirms the feature works correctly through manual testing
+- Once ready for automated testing: write a new test or update an existing test, then run the affected tests to make sure they pass
 - Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test` with a specific filename or filter.
 
 === inertia-laravel/core rules ===
@@ -542,7 +545,8 @@ If your application uses the `<Form>` component from Inertia, you can use Wayfin
 
 ### Testing
 
-- If you need to verify a feature is working, write or update a Unit / Feature test.
+- Follow the manual-first testing workflow: implement → manual test by user → feedback → automated tests
+- Automated tests are written after manual validation, not before or during implementation
 
 ### Pest Tests
 
@@ -572,7 +576,7 @@ If your application uses the `<Form>` component from Inertia, you can use Wayfin
   it('returns all', function () {
   $response = $this->postJson('/api/docs', []);
 
-                    $response->assertSuccessful();
+                      $response->assertSuccessful();
 
     });
     </code-snippet>
@@ -710,13 +714,13 @@ $pages->assertNoJavascriptErrors()->assertNoConsoleLogs();
 
 - When listing items, use gap utilities for spacing, don't use margins.
 
-                  <code-snippet name="Valid Flex Gap Spacing Example" lang="html">
-                      <div class="flex gap-8">
-                          <div>Superior</div>
-                          <div>Michigan</div>
-                          <div>Erie</div>
-                      </div>
-                  </code-snippet>
+                    <code-snippet name="Valid Flex Gap Spacing Example" lang="html">
+                        <div class="flex gap-8">
+                            <div>Superior</div>
+                            <div>Michigan</div>
+                            <div>Erie</div>
+                        </div>
+                    </code-snippet>
 
 ### Dark Mode
 

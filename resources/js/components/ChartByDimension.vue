@@ -17,14 +17,19 @@ interface Props {
         | 'precipitation'
         | 'humidity'
         | 'wind'
+        | 'windDirection'
+        | 'pressure'
         | 'sunshine';
     data: Record<string, ChartDataPoint[]>;
     stations: Record<string, { name?: string; provincia?: string | null }>;
     tickFormatter?: (value: number) => string;
     isMonthlyYearly?: boolean;
+    loading?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    loading: false,
+});
 
 // Generate colors for each station
 const stationColors = [
@@ -69,10 +74,45 @@ const dimensionConfig = {
         type: 'line' as const,
         hasMinMax: false,
     },
+    windDirection: {
+        label: 'Windrichtung',
+        unit: '°',
+        color: '#22c55e',
+        type: 'line' as const,
+        hasMinMax: false,
+    },
+    pressure: {
+        label: 'Luftdruck',
+        unit: 'hPa',
+        color: '#0ea5e9',
+        type: 'line' as const,
+        hasMinMax: true,
+    },
     sunshine: {
         label: 'Sonnenscheindauer',
         unit: 'h',
         color: '#f59e0b',
+        type: 'bar' as const,
+        hasMinMax: false,
+    },
+    clearDays: {
+        label: 'Klare Tage',
+        unit: 'Tage',
+        color: '#22c55e',
+        type: 'bar' as const,
+        hasMinMax: false,
+    },
+    overcastDays: {
+        label: 'Bedeckte Tage',
+        unit: 'Tage',
+        color: '#6b7280',
+        type: 'bar' as const,
+        hasMinMax: false,
+    },
+    rainyDays: {
+        label: 'Regentage',
+        unit: 'Tage',
+        color: '#3b82f6',
         type: 'bar' as const,
         hasMinMax: false,
     },
@@ -181,6 +221,11 @@ const chartData = computed(() => {
             if (base === 'min') return 'humidityMin';
             return 'humidity';
         }
+        if (props.dimension === 'pressure') {
+            if (base === 'max') return 'pressureMax';
+            if (base === 'min') return 'pressureMin';
+            return 'pressure';
+        }
         return props.dimension;
     };
 
@@ -209,6 +254,12 @@ const chartData = computed(() => {
 
                 dataPoint[`station_${stationId}_max`] = maxValue;
                 dataPoint[`station_${stationId}_min`] = minValue;
+            }
+
+            // Include gust values for wind dimension
+            if (props.dimension === 'wind') {
+                const gustValue = point?.windGust ?? null;
+                dataPoint[`station_${stationId}_gust`] = gustValue;
             }
         });
 
@@ -267,7 +318,18 @@ const yDomain = computed(() => {
                     const hMax = point.humidityMax;
                     if (hMin != null) values.push(hMin);
                     if (hMax != null) values.push(hMax);
+                } else if (props.dimension === 'pressure') {
+                    const pMin = point.pressureMin;
+                    const pMax = point.pressureMax;
+                    if (pMin != null) values.push(pMin);
+                    if (pMax != null) values.push(pMax);
                 }
+            }
+
+            // For wind, include gust values in domain
+            if (props.dimension === 'wind') {
+                const gust = (point as any).windGust;
+                if (gust != null) values.push(gust as number);
             }
         });
     });
@@ -297,7 +359,13 @@ const yDomain = computed(() => {
 
 <template>
     <div class="flex h-full min-h-0 w-full flex-col">
-        <div class="min-h-0 w-full flex-1">
+        <!-- Skeleton loading state -->
+        <div v-if="loading" class="min-h-0 w-full flex-1 animate-pulse">
+            <div
+                class="h-full w-full rounded-lg bg-slate-200 dark:bg-slate-800"
+            ></div>
+        </div>
+        <div v-else class="min-h-0 w-full flex-1">
             <VisXYContainer
                 :data="chartData"
                 :margin="chartMargin"
@@ -361,6 +429,32 @@ const yDomain = computed(() => {
                         :line-width="2"
                         :interpolate-missing-data="true"
                     />
+
+                    <!-- Wind gust overlay area: [mean, gust-mean] -->
+                    <VisArea
+                        v-if="props.dimension === 'wind'"
+                        :x="(d: any) => d.time"
+                        :y="[
+                            (d: any) => {
+                                const meanV = d[`station_${stationId}`];
+                                return meanV != null ? meanV : undefined;
+                            },
+                            (d: any) => {
+                                const meanV = d[`station_${stationId}`];
+                                const gustV = d[`station_${stationId}_gust`];
+                                if (meanV == null || gustV == null)
+                                    return undefined;
+                                return Math.max(0, gustV - meanV);
+                            },
+                        ]"
+                        :color="
+                            (_d: any, i: number) =>
+                                i === 0
+                                    ? 'rgba(0,0,0,0)'
+                                    : hexToRgba(getStationColor(stationId), 0.2)
+                        "
+                        :interpolate-missing-data="true"
+                    />
                 </template>
 
                 <!-- X Axis -->
@@ -386,6 +480,23 @@ const yDomain = computed(() => {
             </VisXYContainer>
         </div>
 
-        <ChartLegend :items="legendItems" class="flex-shrink-0 pt-2 sm:pt-3" />
+        <!-- Skeleton legend when loading -->
+        <div v-if="loading" class="flex-shrink-0 animate-pulse pt-2 sm:pt-3">
+            <div class="flex flex-wrap gap-3">
+                <div v-for="i in 3" :key="i" class="flex items-center gap-2">
+                    <div
+                        class="h-3 w-3 rounded-full bg-slate-300 dark:bg-slate-700"
+                    ></div>
+                    <div
+                        class="h-4 w-24 rounded bg-slate-300 dark:bg-slate-700"
+                    ></div>
+                </div>
+            </div>
+        </div>
+        <ChartLegend
+            v-else
+            :items="legendItems"
+            class="flex-shrink-0 pt-2 sm:pt-3"
+        />
     </div>
 </template>

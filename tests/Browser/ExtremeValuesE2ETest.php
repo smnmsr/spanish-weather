@@ -34,32 +34,41 @@ it('completes the full workflow from home page to extreme values display', funct
     // 5. Verify results are displayed (will wait for element to appear)
     $page->assertSee('Extremwerte');
 
-    // 6. Verify the extreme metric slides (card titles) are visible
-    // We expect per-metric slides instead of grouped tables now
+    // 6. Verify ALL 8 extreme metric slides (card titles) are visible
     $page->assertSee('Höchste Temperatur')
         ->assertSee('Tiefste Temperatur')
+        ->assertSee('Durchschnitt Hoch')
+        ->assertSee('Durchschnitt Tief')
         ->assertSee('Max. Tagesniederschlag')
+        ->assertSee('Max. Monatsniederschlag')
+        ->assertSee('Min. Monatsniederschlag')
         ->assertSee('Stärkste Böe');
 
     // 7. Verify station names appear in results
     $page->assertSee('MADRID RETIRO')
         ->assertSee('BARCELONA AEROPUERTO');
 
-    // 8. Verify card content shows expected units/labels
-    // Temperature values include °C
-    $page->assertSee('°C')
-        ->assertSee('Durchschnitt Hoch')
-        ->assertSee('Durchschnitt Tief');
+    // 8. Verify temperature cards show units
+    $page->assertSee('°C');
 
-    // 9. Verify precipitation extreme values slide
-    $page->assertSee('Max. Monatsniederschlag')
-        ->assertSee('Min. Monatsniederschlag')
-        ->assertSee('mm');
+    // 9. Verify precipitation cards show units
+    $page->assertSee('mm');
 
-    // 10. Verify wind extreme values slide
-    $page->assertSee('Stärkste Böe')
-        ->assertSee('km/h')
+    // 10. Verify wind cards show units and direction label
+    $page->assertSee('km/h')
         ->assertSee('Richtung:');
+
+    // 11. Verify actual extreme values render from fixtures (text-only, no charts)
+    $page->assertSee('42.0 °C') // absolute max
+        ->assertSee('-14.0 °C') // absolute min
+        ->assertSee('31.5 °C') // warmest month mean
+        ->assertSee('-1.5 °C') // coldest month mean
+        ->assertSee('112.0 mm') // max daily precipitation
+        ->assertSee('420.0 mm') // max monthly precipitation
+        ->assertSee('0.0 mm') // min monthly precipitation
+        ->assertSee('120 km/h') // strongest gust
+        ->assertSee('Richtung: 240°')
+        ->assertSee('14. Februar 1989, 03:45');
 })->with([
     'desktop light mode' => ['desktop', false],
     'mobile dark mode' => ['mobile', true],

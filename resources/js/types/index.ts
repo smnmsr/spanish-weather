@@ -10,15 +10,32 @@ export type DimensionKey =
     | 'precipitation'
     | 'humidity'
     | 'wind'
-    | 'sunshine';
+    | 'windDirection'
+    | 'pressure'
+    | 'sunshine'
+    | 'clearDays'
+    | 'overcastDays'
+    | 'rainyDays';
 
 export interface ChartDataPoint {
     time: number; // Unix timestamp (ms)
     temperature?: number | null;
+    temperatureMax?: number | null;
+    temperatureMin?: number | null;
     precipitation?: number | null;
     humidity?: number | null;
+    humidityMax?: number | null;
+    humidityMin?: number | null;
     wind?: number | null;
+    windGust?: number | null;
+    windDirection?: number | null;
+    pressure?: number | null;
+    pressureMin?: number | null;
+    pressureMax?: number | null;
     sunshine?: number | null;
+    clearDays?: number | null;
+    overcastDays?: number | null;
+    rainyDays?: number | null;
 }
 
 export interface Municipality {
@@ -37,5 +54,10 @@ export const DimensionLabels: Record<DimensionKey, string> = {
     precipitation: 'Niederschlag',
     humidity: 'Luftfeuchtigkeit',
     wind: 'Wind',
+    windDirection: 'Windrichtung',
+    pressure: 'Luftdruck',
     sunshine: 'Sonnenschein',
+    clearDays: 'Klare Tage',
+    overcastDays: 'Bedeckte Tage',
+    rainyDays: 'Regentage',
 };

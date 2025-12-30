@@ -11,6 +11,12 @@ Route::post('/query-data', [StationController::class, 'queryData'])->name('query
 
 // API Routes for AEMET Weather Data
 Route::prefix('api')->group(function () {
+    // Batch weather queries (async)
+    Route::post('/batch/start', [WeatherDataController::class, 'startBatch'])->name('api.batch.start');
+    Route::get('/batch/{batchId}/progress', [WeatherDataController::class, 'batchProgress'])->name('api.batch.progress');
+    Route::get('/batch/{batchId}/results', [WeatherDataController::class, 'batchResults'])->name('api.batch.results');
+    Route::post('/batch/{batchId}/cancel', [WeatherDataController::class, 'batchCancel'])->name('api.batch.cancel');
+
     // Weather Stations
     Route::get('/stations', [WeatherStationsController::class, 'index'])->name('api.stations.index');
     Route::get('/stations/nearest', [WeatherStationsController::class, 'nearest'])->name('api.stations.nearest');

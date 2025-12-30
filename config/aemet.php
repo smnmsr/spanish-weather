@@ -41,4 +41,20 @@ return [
         'historical_data' => env('AEMET_CACHE_TTL_30D', 604800),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Batch Processing Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Controls how batch queries are processed:
+    | - sync_threshold: Max number of jobs to process synchronously before
+    |   dispatching to queue (default: 5). If total jobs <= this value,
+    |   runs inline. If all jobs are cached, returns immediately.
+    |
+    */
+
+    'batch' => [
+        'sync_threshold' => env('AEMET_BATCH_SYNC_THRESHOLD', 5),
+    ],
+
 ];

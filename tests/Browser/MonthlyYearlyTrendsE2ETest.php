@@ -221,3 +221,208 @@ it('displays correct German adjectives for each dimension in monthly trends', fu
     'humidity' => ['humidity', 'Luftfeuchtigkeiten'],
     'wind' => ['wind', 'Windgeschwindigkeiten'],
 ]);
+
+it('displays all expected chart dimensions for monthly-yearly-trends with multiple stations', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
+    // Select 3 stations to avoid memory issues in test runner
+    $page = configurePage('/?step=results&stations=3195,0201D,5783&analysis=monthly-yearly-trends&month=6&startYear=2020&endYear=2024', 'desktop', false);
+
+    // Verify all station names appear (assertSee will wait for elements)
+    $page->assertSee('MADRID RETIRO')
+        ->assertSee('BARCELONA AEROPUERTO')
+        ->assertSee('VALENCIA');
+
+    // Verify all expected chart dimensions are present (excluding wind direction)
+    $page->assertSee('Temperaturen im Juni', 'Temperature chart title should be visible')
+        ->assertSee('Niederschläge im Juni', 'Precipitation chart title should be visible')
+        ->assertSee('Luftfeuchtigkeiten im Juni', 'Humidity chart title should be visible')
+        ->assertSee('Windgeschwindigkeiten im Juni', 'Wind chart title should be visible')
+        ->assertSee('Luftdrücke im Juni', 'Pressure chart title should be visible')
+        ->assertSee('Sonnenscheindauer im Juni', 'Sunshine chart title should be visible')
+        ->assertSee('Klare Tage im Juni', 'Clear days chart title should be visible')
+        ->assertSee('Bedeckte Tage im Juni', 'Overcast days chart title should be visible')
+        ->assertSee('Regentage im Juni', 'Rainy days chart title should be visible');
+
+    // Verify wind direction is NOT shown (not available in monthly data)
+    $page->assertDontSee('Windrichtung');
+
+    // Verify chart descriptions
+    $page->assertSee('Temperatur (°C) – Mittelwert (Linie), Min/Max (Bereich)', 'Temperature description should show range')
+        ->assertSee('Luftdruck (hPa) – Mittelwert', 'Pressure description should be visible')
+        ->assertSee('Sonnenscheindauer (h) für alle Stationen', 'Sunshine description should be visible')
+        ->assertSee('Anzahl klarer Tage pro Monat', 'Clear days description should be visible')
+        ->assertSee('Anzahl bedeckter Tage pro Monat', 'Overcast days description should be visible')
+        ->assertSee('Anzahl der Regentage pro Monat', 'Rainy days description should be visible');
+
+    // Verify SVG elements are rendered for each chart (9 dimensions total)
+    $page->assertScript(
+        "document.querySelectorAll('svg').length >= 9",
+        true,
+        'At least 9 charts should be rendered as SVG (temperature, precipitation, humidity, wind, pressure, sunshine, clearDays, overcastDays, rainyDays)'
+    );
+
+    // Verify legend has station entries
+    // Each legend item is a div with color indicator + span with station name
+    $page->assertScript(
+        "document.querySelectorAll('.mt-4.flex.flex-wrap.justify-center span').length >= 3",
+        true,
+        'Should have at least 3 legend text items for 3 stations'
+    );
+
+    // Verify carousel navigation is present
+    $page->assertPresent('[role="region"]', 'Carousel region should be present');
+});
+
+it('verifies monthly-yearly-trends charts contain actual data points', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
+    $page = configurePage('/?step=results&stations=3195,0201D&analysis=monthly-yearly-trends&month=6&startYear=2020&endYear=2024', 'desktop', false);
+
+    // Wait for results to load
+    $page->waitForText('Temperaturen im Juni', 10);
+
+    // Verify SVG charts are rendered with actual path elements (data visualization)
+    $page->assertScript(
+        "document.querySelectorAll('svg path').length > 0",
+        true,
+        'SVG charts should contain path elements representing data'
+    );
+
+    // Verify line charts have stroke elements (for temperature, humidity, wind, pressure)
+    $page->assertScript(
+        "document.querySelectorAll('svg path[stroke], svg line[stroke]').length > 0",
+        true,
+        'Line charts should have stroke elements'
+    );
+
+    // Verify bar charts have rect elements (for precipitation, sunshine, weather event counts)
+    $page->assertScript(
+        "document.querySelectorAll('svg rect').length > 0",
+        true,
+        'Bar charts should have rect elements'
+    );
+
+    // Verify axis labels are present
+    $page->assertScript(
+        "document.querySelectorAll('svg text').length > 0",
+        true,
+        'Charts should have text elements for axis labels'
+    );
+});
+
+it('verifies pressure chart has min/max bands for monthly-yearly-trends', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
+    $page = configurePage('/?step=results&stations=3195&analysis=monthly-yearly-trends&month=6&startYear=2020&endYear=2024', 'desktop', false);
+
+    // Wait for results to load
+    $page->waitForText('im Juni', 10);
+
+    // Verify pressure chart title is present (it may not be visible in current carousel slide)
+    $page->assertScript(
+        "document.body.innerText.includes('Luftdrücke im Juni')",
+        true,
+        'Pressure chart title should be present in the DOM'
+    );
+
+    // Verify the chart description mentions pressure unit
+    $page->assertScript(
+        "document.body.innerText.includes('Luftdruck (hPa)')",
+        true,
+        'Pressure chart should show unit'
+    );
+
+    // Verify SVG has multiple paths (for mean line and potentially min/max areas)
+    $page->assertScript(
+        "document.querySelectorAll('svg path').length >= 1",
+        true,
+        'Pressure chart should have at least one path element for the mean line or min/max area'
+    );
+});
+
+it('verifies weather event count charts display bar data correctly', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
+    $page = configurePage('/?step=results&stations=3195,0201D&analysis=monthly-yearly-trends&month=6&startYear=2020&endYear=2024', 'desktop', false);
+
+    // Wait for results to load
+    $page->waitForText('im Juni', 10);
+
+    // Simply verify that at least one weather event chart title is visible
+    // The carousel will show different charts, so we check if any are present
+    $page->assertScript(
+        "document.body.innerText.includes('Klare Tage im Juni') || document.body.innerText.includes('Bedeckte Tage im Juni') || document.body.innerText.includes('Regentage im Juni')",
+        true,
+        'At least one weather event chart title should be present'
+    );
+
+    // Verify bar chart elements (rect) are present in the rendered SVGs
+    $page->assertScript(
+        "document.querySelectorAll('svg rect').length > 0",
+        true,
+        'Weather event charts should have rect elements for bars'
+    );
+
+    // Verify SVG charts exist
+    $page->assertScript(
+        "document.querySelectorAll('svg').length >= 9",
+        true,
+        'All 9 dimension charts should be rendered'
+    );
+});
+
+it('handles 2-year range correctly with all new dimensions', function () {
+    // Clear cache and set up HTTP mocks
+    Cache::flush();
+    Http::fake(AemetFixtures::httpFakeConfig());
+
+    $page = configurePage('/?step=data-options&stations=3195,0201D,5783', 'desktop', false);
+
+    // Select monthly-yearly-trends
+    $page->click('[data-testid="data-option-card-monthly-yearly-trends"]');
+
+    // Select a specific month (Juni)
+    $page->click('Januar')->click('Juni');
+
+    // Use a 2-year range
+    $endYear = date('Y');
+    $startYear = $endYear - 1;
+    $page->fill('#start-year-inline', (string) $startYear)
+        ->fill('#end-year-inline', (string) $endYear)
+        ->click('Daten abfragen');
+
+    // Wait for results to load
+    $page->waitForText('Monatliche/Jährliche Trends', 10);
+
+    // Verify all three stations are displayed
+    $page->assertSee('MADRID RETIRO')
+        ->assertSee('BARCELONA AEROPUERTO')
+        ->assertSee('VALENCIA');
+
+    // Verify key dimensions are present
+    $page->assertSee('Temperaturen im Juni')
+        ->assertSee('Niederschläge im Juni');
+
+    // Verify SVG charts are rendered
+    $page->assertScript(
+        "document.querySelectorAll('svg').length >= 9",
+        true,
+        'Should have at least 9 charts for all dimensions'
+    );
+
+    // Verify legend shows all 3 stations
+    $page->assertScript(
+        "document.querySelectorAll('.mt-4.flex.flex-wrap.justify-center span').length >= 3",
+        true,
+        'Legend should show all 3 stations'
+    );
+});

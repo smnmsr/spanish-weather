@@ -79,7 +79,10 @@ class AemetFixtures
                 'hr' => 72,
                 'prec' => 0.0,
                 'vv' => 5.2,
+                'vmax' => 7.5,
+                'dv' => 230,
                 'pres' => 1013.2,
+                'inso' => 45,
             ],
             [
                 'idema' => '3195',
@@ -88,7 +91,10 @@ class AemetFixtures
                 'hr' => 68,
                 'prec' => 0.0,
                 'vv' => 6.8,
+                'vmax' => 9.2,
+                'dv' => 235,
                 'pres' => 1013.0,
+                'inso' => 58,
             ],
             [
                 'idema' => '3195',
@@ -97,7 +103,10 @@ class AemetFixtures
                 'hr' => 62,
                 'prec' => 0.0,
                 'vv' => 8.1,
+                'vmax' => 11.5,
+                'dv' => 240,
                 'pres' => 1012.8,
+                'inso' => 55,
             ],
             [
                 'idema' => '3195',
@@ -106,7 +115,10 @@ class AemetFixtures
                 'hr' => 58,
                 'prec' => 0.0,
                 'vv' => 9.3,
+                'vmax' => 12.8,
+                'dv' => 245,
                 'pres' => 1012.5,
+                'inso' => 60,
             ],
             [
                 'idema' => '3195',
@@ -115,7 +127,10 @@ class AemetFixtures
                 'hr' => 55,
                 'prec' => 0.0,
                 'vv' => 10.5,
+                'vmax' => 14.2,
+                'dv' => 250,
                 'pres' => 1012.2,
+                'inso' => 62,
             ],
 
             // Barcelona Airport observations (0201D)
@@ -126,7 +141,10 @@ class AemetFixtures
                 'hr' => 78,
                 'prec' => 0.2,
                 'vv' => 12.5,
+                'vmax' => 16.3,
+                'dv' => 180,
                 'pres' => 1015.8,
+                'inso' => 50,
             ],
             [
                 'idema' => '0201D',
@@ -135,7 +153,10 @@ class AemetFixtures
                 'hr' => 75,
                 'prec' => 0.1,
                 'vv' => 13.2,
+                'vmax' => 17.5,
+                'dv' => 185,
                 'pres' => 1015.5,
+                'inso' => 52,
             ],
             [
                 'idema' => '0201D',
@@ -144,7 +165,10 @@ class AemetFixtures
                 'hr' => 71,
                 'prec' => 0.0,
                 'vv' => 14.8,
+                'vmax' => 19.2,
+                'dv' => 190,
                 'pres' => 1015.2,
+                'inso' => 54,
             ],
             [
                 'idema' => '0201D',
@@ -153,7 +177,10 @@ class AemetFixtures
                 'hr' => 68,
                 'prec' => 0.0,
                 'vv' => 15.5,
+                'vmax' => 20.1,
+                'dv' => 195,
                 'pres' => 1015.0,
+                'inso' => 56,
             ],
             [
                 'idema' => '0201D',
@@ -162,7 +189,10 @@ class AemetFixtures
                 'hr' => 65,
                 'prec' => 0.0,
                 'vv' => 16.2,
+                'vmax' => 21.3,
+                'dv' => 200,
                 'pres' => 1014.8,
+                'inso' => 58,
             ],
 
             // Valencia observations (5783)
@@ -326,7 +356,10 @@ class AemetFixtures
                 'hrMin' => '48',
                 'prec' => '0,0',
                 'velmedia' => '8,5',
-                'sol' => '6,2',
+                'racha' => '15,2',
+                'dir' => '225',
+                'presMin' => '1012,3',
+                'presMax' => '1018,7',
             ],
             [
                 'idema' => '3195',
@@ -339,7 +372,10 @@ class AemetFixtures
                 'hrMin' => '45',
                 'prec' => '0,0',
                 'velmedia' => '9,2',
-                'sol' => '6,8',
+                'racha' => '16,8',
+                'dir' => '240',
+                'presMin' => '1013,1',
+                'presMax' => '1019,5',
             ],
             [
                 'idema' => '3195',
@@ -352,7 +388,10 @@ class AemetFixtures
                 'hrMin' => '42',
                 'prec' => '0,0',
                 'velmedia' => '7,8',
-                'sol' => '7,5',
+                'racha' => '14,5',
+                'dir' => '210',
+                'presMin' => '1014,2',
+                'presMax' => '1020,8',
             ],
             [
                 'idema' => '0201D',
@@ -365,7 +404,10 @@ class AemetFixtures
                 'hrMin' => '58',
                 'prec' => '2,3',
                 'velmedia' => '12,5',
-                'sol' => '4,1',
+                'racha' => '22,3',
+                'dir' => '180',
+                'presMin' => '1008,5',
+                'presMax' => '1015,2',
             ],
             [
                 'idema' => '0201D',
@@ -378,7 +420,10 @@ class AemetFixtures
                 'hrMin' => '54',
                 'prec' => '0,5',
                 'velmedia' => '11,8',
-                'sol' => '5,2',
+                'racha' => '21,5',
+                'dir' => '195',
+                'presMin' => '1009,8',
+                'presMax' => '1016,1',
             ],
             [
                 'idema' => '0201D',
@@ -391,7 +436,10 @@ class AemetFixtures
                 'hrMin' => '51',
                 'prec' => '0,0',
                 'velmedia' => '10,5',
-                'sol' => '6,5',
+                'racha' => '19,8',
+                'dir' => '200',
+                'presMin' => '1011,2',
+                'presMax' => '1017,5',
             ],
             // Valencia observations (5783)
             [
@@ -405,7 +453,10 @@ class AemetFixtures
                 'hrMin' => '56',
                 'prec' => '0,0',
                 'velmedia' => '7,2',
-                'sol' => '7,1',
+                'racha' => '13,8',
+                'dir' => '90',
+                'presMin' => '1013,8',
+                'presMax' => '1019,2',
             ],
             [
                 'idema' => '5783',
@@ -418,7 +469,10 @@ class AemetFixtures
                 'hrMin' => '52',
                 'prec' => '0,0',
                 'velmedia' => '8,1',
-                'sol' => '7,8',
+                'racha' => '15,2',
+                'dir' => '105',
+                'presMin' => '1014,5',
+                'presMax' => '1020,1',
             ],
             [
                 'idema' => '5783',
@@ -431,7 +485,10 @@ class AemetFixtures
                 'hrMin' => '48',
                 'prec' => '0,0',
                 'velmedia' => '6,8',
-                'sol' => '8,2',
+                'racha' => '12,5',
+                'dir' => '85',
+                'presMin' => '1015,8',
+                'presMax' => '1021,3',
             ],
             // Sevilla Aeropuerto observations (5960)
             [
@@ -576,6 +633,28 @@ class AemetFixtures
                 $humidity = (int) (80 - ($avgTemp / 2) + mt_rand(-10, 10));
                 $humidity = max(25, min(95, $humidity)); // Clamp between 25-95%
 
+                // Wind speed (mean) - varies by season and station
+                $windSpeed = mt_rand(50, 150) / 10.0; // 5-15 km/h
+
+                // Pressure (mean) - realistic sea level pressure
+                $pressure = number_format(mt_rand(10000, 10250) / 10.0, 1, ',', ''); // 1000-1025 hPa
+
+                // Pressure min/max with embedded day
+                $pressureMin = number_format(mt_rand(9800, 10100) / 10.0, 1, ',', '');
+                $pressureMax = number_format(mt_rand(10200, 10400) / 10.0, 1, ',', '');
+                $pressureMinDay = mt_rand(1, 28);
+                $pressureMaxDay = mt_rand(1, 28);
+
+                // Sunshine hours - varies by season (more in summer)
+                $sunshineBase = in_array($month, [5, 6, 7, 8]) ? 200 : 100; // Summer vs other
+                $sunshine = number_format(mt_rand(50, $sunshineBase + 50), 1, ',', ''); // 50-250h
+
+                // Weather event days (n_des = clear, n_cub = overcast, n_llu = rainy)
+                $daysInMonth = 30; // Simplified
+                $clearDays = mt_rand(3, 20);
+                $overcastDays = mt_rand(2, 15);
+                $rainyDays = mt_rand(2, 12);
+
                 $data[] = [
                     'idema' => $stationId,
                     'indicativo' => $stationId,
@@ -585,6 +664,14 @@ class AemetFixtures
                     'tm_min' => number_format($minTemp, 1, ',', ''),
                     'p_mes' => (string) $precipitation,
                     'hr' => (string) $humidity,
+                    'w_med' => number_format($windSpeed, 1, ',', ''),
+                    'q_med' => $pressure,
+                    'q_min' => "{$pressureMin}({$pressureMinDay})",
+                    'q_max' => "{$pressureMax}({$pressureMaxDay})",
+                    'inso' => $sunshine,
+                    'n_des' => (string) $clearDays,
+                    'n_cub' => (string) $overcastDays,
+                    'n_llu' => (string) $rainyDays,
                 ];
             }
         }
@@ -833,6 +920,11 @@ class AemetFixtures
                 'tm_min_md' => '5.4',
                 'p_mes_md' => '35.2',
                 'hr_md' => '72',
+                'w_med_md' => '6.5',
+                'w_racha_md' => '17.3',
+                'q_mar_md' => '1022.6',
+                'q_med_md' => '943.4',
+                'inso_md' => '6.7',
             ],
             [
                 'indicativo' => '3195',
@@ -842,6 +934,11 @@ class AemetFixtures
                 'tm_min_md' => '6.6',
                 'p_mes_md' => '28.5',
                 'hr_md' => '70',
+                'w_med_md' => '7.3',
+                'w_racha_md' => '17.5',
+                'q_mar_md' => '1020.8',
+                'q_med_md' => '942.2',
+                'inso_md' => '7.8',
             ],
             [
                 'indicativo' => '3195',
@@ -851,6 +948,11 @@ class AemetFixtures
                 'tm_min_md' => '9.8',
                 'p_mes_md' => '32.1',
                 'hr_md' => '65',
+                'w_med_md' => '7.8',
+                'w_racha_md' => '18.2',
+                'q_mar_md' => '1019.5',
+                'q_med_md' => '941.8',
+                'inso_md' => '8.9',
             ],
             [
                 'indicativo' => '3195',
@@ -860,6 +962,11 @@ class AemetFixtures
                 'tm_min_md' => '12.1',
                 'p_mes_md' => '45.3',
                 'hr_md' => '62',
+                'w_med_md' => '8.2',
+                'w_racha_md' => '19.1',
+                'q_mar_md' => '1018.2',
+                'q_med_md' => '940.5',
+                'inso_md' => '9.5',
             ],
             [
                 'indicativo' => '3195',
@@ -869,6 +976,11 @@ class AemetFixtures
                 'tm_min_md' => '17.4',
                 'p_mes_md' => '38.2',
                 'hr_md' => '55',
+                'w_med_md' => '7.5',
+                'w_racha_md' => '18.4',
+                'q_mar_md' => '1017.8',
+                'q_med_md' => '940.1',
+                'inso_md' => '10.8',
             ],
             [
                 'indicativo' => '3195',
@@ -878,6 +990,11 @@ class AemetFixtures
                 'tm_min_md' => '22.8',
                 'p_mes_md' => '24.6',
                 'hr_md' => '48',
+                'w_med_md' => '7.1',
+                'w_racha_md' => '17.8',
+                'q_mar_md' => '1017.5',
+                'q_med_md' => '939.8',
+                'inso_md' => '11.2',
             ],
             [
                 'indicativo' => '3195',
@@ -887,6 +1004,11 @@ class AemetFixtures
                 'tm_min_md' => '25.1',
                 'p_mes_md' => '15.3',
                 'hr_md' => '44',
+                'w_med_md' => '6.8',
+                'w_racha_md' => '17.2',
+                'q_mar_md' => '1017.2',
+                'q_med_md' => '939.5',
+                'inso_md' => '12.1',
             ],
             [
                 'indicativo' => '3195',
@@ -896,6 +1018,11 @@ class AemetFixtures
                 'tm_min_md' => '24.6',
                 'p_mes_md' => '18.7',
                 'hr_md' => '46',
+                'w_med_md' => '6.5',
+                'w_racha_md' => '16.8',
+                'q_mar_md' => '1017.8',
+                'q_med_md' => '940.1',
+                'inso_md' => '11.5',
             ],
             [
                 'indicativo' => '3195',
@@ -905,6 +1032,11 @@ class AemetFixtures
                 'tm_min_md' => '19.8',
                 'p_mes_md' => '32.4',
                 'hr_md' => '52',
+                'w_med_md' => '6.8',
+                'w_racha_md' => '17.5',
+                'q_mar_md' => '1018.5',
+                'q_med_md' => '940.8',
+                'inso_md' => '9.8',
             ],
             [
                 'indicativo' => '3195',
@@ -914,6 +1046,11 @@ class AemetFixtures
                 'tm_min_md' => '12.9',
                 'p_mes_md' => '48.6',
                 'hr_md' => '60',
+                'w_med_md' => '6.2',
+                'w_racha_md' => '16.8',
+                'q_mar_md' => '1019.8',
+                'q_med_md' => '942.1',
+                'inso_md' => '8.2',
             ],
             [
                 'indicativo' => '3195',
@@ -923,6 +1060,11 @@ class AemetFixtures
                 'tm_min_md' => '8.4',
                 'p_mes_md' => '52.3',
                 'hr_md' => '68',
+                'w_med_md' => '6.5',
+                'w_racha_md' => '17.1',
+                'q_mar_md' => '1021.2',
+                'q_med_md' => '943.5',
+                'inso_md' => '7.1',
             ],
             [
                 'indicativo' => '3195',
@@ -932,6 +1074,11 @@ class AemetFixtures
                 'tm_min_md' => '5.7',
                 'p_mes_md' => '42.1',
                 'hr_md' => '71',
+                'w_med_md' => '6.3',
+                'w_racha_md' => '17.0',
+                'q_mar_md' => '1022.1',
+                'q_med_md' => '943.8',
+                'inso_md' => '6.5',
             ],
             // Barcelona normals
             [
@@ -942,6 +1089,11 @@ class AemetFixtures
                 'tm_min_md' => '5.6',
                 'p_mes_md' => '42.3',
                 'hr_md' => '75',
+                'w_med_md' => '5.8',
+                'w_racha_md' => '15.2',
+                'q_mar_md' => '1021.8',
+                'q_med_md' => '1014.5',
+                'inso_md' => '5.9',
             ],
             [
                 'indicativo' => '0201D',
@@ -951,6 +1103,11 @@ class AemetFixtures
                 'tm_min_md' => '6.9',
                 'p_mes_md' => '35.8',
                 'hr_md' => '73',
+                'w_med_md' => '6.2',
+                'w_racha_md' => '16.1',
+                'q_mar_md' => '1020.5',
+                'q_med_md' => '1013.8',
+                'inso_md' => '7.2',
             ],
             [
                 'indicativo' => '0201D',
@@ -960,6 +1117,11 @@ class AemetFixtures
                 'tm_min_md' => '9.5',
                 'p_mes_md' => '38.2',
                 'hr_md' => '71',
+                'w_med_md' => '6.5',
+                'w_racha_md' => '16.8',
+                'q_mar_md' => '1019.2',
+                'q_med_md' => '1013.1',
+                'inso_md' => '8.5',
             ],
             [
                 'indicativo' => '0201D',
