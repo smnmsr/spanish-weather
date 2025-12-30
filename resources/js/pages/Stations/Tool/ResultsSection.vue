@@ -141,6 +141,16 @@ const partialDataInfo = computed(() => {
             'overcastDays',
             'rainyDays',
         ];
+    } else if (isNormalsQuery.value) {
+        // Climatological normals: exclude windDirection (not available)
+        dimensions = [
+            'temperature',
+            'precipitation',
+            'humidity',
+            'wind',
+            'pressure',
+            'sunshine',
+        ];
     } else {
         dimensions = [
             'temperature',
@@ -286,6 +296,16 @@ const chartSlides = computed(() => {
             'clearDays',
             'overcastDays',
             'rainyDays',
+        ];
+    } else if (isNormalsQuery.value) {
+        // Climatological normals: exclude windDirection (not available in API)
+        dimensions = [
+            'temperature',
+            'precipitation',
+            'humidity',
+            'wind',
+            'pressure',
+            'sunshine',
         ];
     } else {
         // Other query types: default dimensions

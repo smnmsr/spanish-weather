@@ -191,8 +191,16 @@ class BatchResultsFormatter
 
         foreach ($normalsByStation as $stationId => $entries) {
             foreach ($entries as $entry) {
+                // Some entries may be summary/annual records; only consider monthly entries when 'mes' is present
+                $month = (int) ($entry['mes'] ?? 0);
+                if ($month < 1 || $month > 12) {
+                    continue;
+                }
+
                 $flattened[] = array_merge($entry, [
                     'idema' => $entry['idema'] ?? $entry['indicativo'] ?? $stationId,
+                    // Use neutral year for chart X-axis, e.g., 2000-MM-01
+                    'fecha' => sprintf('2000-%02d-01', $month),
                 ]);
             }
         }

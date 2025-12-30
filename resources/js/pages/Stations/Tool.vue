@@ -170,7 +170,7 @@ const chartDataByStation = computed(() => {
             return timeA.localeCompare(timeB);
         });
 
-        result[stationId] = sorted.map((obs: any, index: number) => {
+        result[stationId] = sorted.map((obs: any) => {
             // Get time value based on query type
             let timeValue: string | undefined;
             if (isDaily) {
@@ -189,18 +189,6 @@ const chartDataByStation = computed(() => {
             }
 
             const date = timeValue ? new Date(timeValue) : new Date();
-
-            // Debug: Log first observation to see available fields (only in dev mode)
-            if (index === 0 && import.meta.env.DEV) {
-                console.log(
-                    'Observation fields for station',
-                    stationId,
-                    '(type:',
-                    queryResults.value?.queryType,
-                    '):',
-                    Object.keys(obs),
-                );
-            }
 
             // Helper to parse comma-separated decimal strings (e.g., "19,5" -> 19.5)
             const parseValue = (val: any): number | null => {
@@ -282,8 +270,11 @@ const chartDataByStation = computed(() => {
                     humidityMax: null,
                     humidityMin: null,
                     precipitation: parseValue(obs.p_mes_md ?? obs.p_mes),
-                    wind: null,
-                    sunshine: null,
+                    wind: parseValue(obs.w_med_md),
+                    windGust: parseValue(obs.w_racha_md),
+                    windDirection: null, // Not available in normals
+                    pressure: parseValue(obs.q_mar_md ?? obs.q_med_md), // Prefer sea-level pressure
+                    sunshine: parseValue(obs.inso_md), // Already in hours/day
                 };
             } else if (isForecast) {
                 // Municipal daily forecast (7 days)
